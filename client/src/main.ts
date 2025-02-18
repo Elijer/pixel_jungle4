@@ -1,11 +1,25 @@
 import './style.css';
+import { io } from "socket.io-client";
+
+let socketAddress = window.location.hostname === "localhost" ? "ws://localhost:3000" : herokuUrl
+const socket = io(socketAddress)
+
+socket.on("connect", ()=> {
+  console.log("server -> client socket connection")
+
+  socket.emit("client-confirm", "connected")
+  
+  socket.on("init", (msg)=>{
+    console.log(`setup data: ${msg}`)
+    // console.log(d)
+  })
+
+})
 
 // Grab the canvas
 const canvas = document.querySelector("canvas");
 document.createElement("canvas");
 const ctx = canvas!.getContext("2d");
-
-console.log("Success")
 
 // Create an off-screen canvas
 const offscreenCanvas = document.createElement("canvas");
