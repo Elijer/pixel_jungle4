@@ -1,0 +1,18 @@
+body {
+  font-family: 'Courier New', Courier, monospace;
+  color: rgb(51, 46, 46);
+  margin: 0; /* Remove default margin */
+  background: black;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; /* Full viewport height */
+  width: 100vw; /* Full viewport width */
+  overflow: hidden; /* Prevent scrolling */
+}
+
+#main-canvas {
+  width: 90vmin;
+  height: 90vmin;
+  border-radius: 10px; /* Optional rounded corners */
+}
