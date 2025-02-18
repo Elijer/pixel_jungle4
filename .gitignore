@@ -1,0 +1,14 @@
+# Ignore compiled output
+/dist
+
+# Ignore Node.js dependencies
+/node_modules
+
+# Ignore TypeScript build artifacts
+/*.tsbuildinfo
+
+# Ignore environment variables and sensitive files
+.env
+.env.local
+
+app.log

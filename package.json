@@ -1,0 +1,28 @@
+{
+  "name": "pixel_jungle4",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "tsc-v": "tsc --version",
+    "ts": "tsc --w",
+    "dev": "cd client; npm run build; cd ..; nodemon",
+    "start": "bun -w src/index.ts",
+    "serve-client": "cd client; npm run build; cd ..; tsc; node dist/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.4",
+    "@types/socket.io": "^3.0.2",
+    "nodemon": "^3.1.9",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.8.1"
+  }
+}

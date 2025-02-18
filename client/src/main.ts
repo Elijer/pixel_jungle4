@@ -1,8 +1,11 @@
 import './style.css';
 
+// Grab the canvas
 const canvas = document.querySelector("canvas");
+document.createElement("canvas");
 const ctx = canvas!.getContext("2d");
-ctx?.reset();
+
+console.log("Success")
 
 // Create an off-screen canvas
 const offscreenCanvas = document.createElement("canvas");
@@ -33,7 +36,7 @@ function drawGrid() {
 }
 
 // Random number generator for colors
-function rand(max) {
+function rand(max: number) {
     return Math.floor(Math.random() * (max + 1));
 }
 
