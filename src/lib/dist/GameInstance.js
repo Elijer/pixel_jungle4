@@ -13,7 +13,7 @@ var compass = [
     config_js_1["default"].viewWidth,
     config_js_1["default"].viewWidth + 1,
 ];
-function createMap() {
+function getMapConfig() {
     var rows = 64;
     var cols = 64;
     var viewRows = 4;
@@ -22,7 +22,7 @@ function createMap() {
     var positions = rows * cols * views;
     return { rows: rows, cols: cols, viewRows: viewRows, viewCols: viewCols, views: views, positions: positions };
 }
-var map = createMap();
+var map = getMapConfig();
 // Normal Traits
 var entityCount = 0;
 var entities = new Set();
@@ -44,7 +44,7 @@ function removeEntity(entity) {
     entities["delete"](entity);
 }
 // POSITION
-function assignRandomPosition() {
+function assignPositionRandomly() {
     return q.getNext();
 }
 function addPosition(entity, position) {
@@ -74,7 +74,7 @@ function removePosition(entity) {
 }
 // SPATIAL ENTITY : ENTITY + POSITION
 function spawnSpatialEntity() {
-    var position = assignRandomPosition();
+    var position = assignPositionRandomly();
     if (!position)
         throw new Error("next tile in queue was undefined - queue may be broken or map is full");
     createSpatialEntity(position);

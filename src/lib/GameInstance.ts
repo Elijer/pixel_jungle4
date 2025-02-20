@@ -17,7 +17,7 @@ type Entity = number
 type Level = 0 | 1 | 2
 type Position = number
 
-function createMap(){
+function getMapConfig(){
   const rows = 64
   const cols = 64
   const viewRows = 4
@@ -27,7 +27,7 @@ function createMap(){
   return {rows, cols, viewRows, viewCols, views, positions}
 }
 
-const map = createMap()
+const map = getMapConfig()
 
 // Normal Traits
 let entityCount: Entity = 0
@@ -55,7 +55,7 @@ function removeEntity(entity: Entity){
 }
 
 // POSITION
-function assignRandomPosition(): number | undefined {
+function assignPositionRandomly(): number | undefined {
   return q.getNext()
 }
 
@@ -85,7 +85,7 @@ function removePosition(entity: Entity): void {
 
 // SPATIAL ENTITY : ENTITY + POSITION
 function spawnSpatialEntity(): void {
-  const position = assignRandomPosition()!
+  const position = assignPositionRandomly()!
   if (!position) throw new Error("next tile in queue was undefined - queue may be broken or map is full")
   createSpatialEntity(position)
 }
