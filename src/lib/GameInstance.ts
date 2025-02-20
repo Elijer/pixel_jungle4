@@ -1,4 +1,5 @@
 import config from './config.js'
+import { LIFIQueue } from './utilities.js';
 import { warn} from './logger.js';
 
 const compass = [
@@ -12,26 +13,98 @@ const compass = [
   config.viewWidth + 1,
 ]
 
-type TileNumber = number
 type Entity = number
+type Level = 0 | 1 | 2
+type Position = number
 
-export class GameInstance {
+function createMap(){
+  const rows = 64
+  const cols = 64
+  const viewRows = 4
+  const viewCols = 4
+  const views = 16
+  const positions = rows * cols * views
+  return {rows, cols, viewRows, viewCols, views, positions}
+}
 
-  entityCounter: number
-  entities: number[]
-  spatialMap: Map<TileNumber, Set<Entity>>
-  energies: number[] // animals, 0-63
-  levels: number[] // plant, 0-3
-  // predators: []
+const map = createMap()
 
-  constructor(){
-    this.entityCounter = 0
-    this.entities = []
-    this.positions = []
-    this.energies = []
-    this.levels = []
+// Normal Traits
+let entityCount: Entity = 0
+let entities: Set<Entity> = new Set()
+let energies: Map<Entity, number> = new Map()
+let levels: Map<Entity, Level> = new Map()
+let positions: Map<Entity, Position> = new Map()
+let predator: Set<Entity> = new Set()
+
+// Reverse Trait Maps
+let positionsReverse: Map<Position, Set<Entity>> = new Map()
+let socketsReverse: Map<string, Entity> = new Map()
+
+const q = new LIFIQueue(10);
+
+// ENTITY
+function createEntity(){
+  const entity = entityCount++
+  entities.add(entity)
+  return entity
+}
+
+function removeEntity(entity: Entity){
+  entities.delete(entity)
+}
+
+// POSITION
+function assignRandomPosition(): number | undefined {
+  return q.getNext()
+}
+
+function addPosition(entity: Entity, position: Position, ): boolean {
+  try {
+    if (!positionsReverse.has(position)) positionsReverse.set(position, new Set())
+      positionsReverse.get(position)?.add(entity)
+      positions.set(entity, position)
+      return true
+  } catch(e) {
+    return false
   }
 }
+
+function removePosition(entity: Entity): void {
+
+  if (!positions.has(entity)) warn(`entity ${entity} doesn't HAVE a position to remove`)
+    
+  const position = positions.get(entity)!
+  positionsReverse.get(position)?.delete(entity)
+  if (!positionsReverse.get(position)?.size){
+    positionsReverse.delete(position)
+    q.reinsert(position)
+  }
+  positions.delete(entity)
+}
+
+// SPATIAL ENTITY : ENTITY + POSITION
+function spawnSpatialEntity(): void {
+  const position = assignRandomPosition()!
+  if (!position) throw new Error("next tile in queue was undefined - queue may be broken or map is full")
+  createSpatialEntity(position)
+}
+
+function createSpatialEntity(position: Position){
+  try {
+    if (position < 0) throw new Error("invalid position to create spatial entity - less than 0")
+    if (position > map.positions) throw new Error("can't create a spatial entity there - out of bounds")
+    const entity = createEntity()
+    if (!addPosition(entity, position)) throw new Error(`couldn't add position to ${entity}`)
+    if (!positionsReverse.has(position)) positionsReverse.set(position, new Set())
+    positionsReverse.get(position)?.add(entity)
+    positions.set(entity, position)
+  } catch (e){
+    warn(`Error while creating entity createEntity(): ${e}`)
+  }
+}
+
+  // predators: []
 
 // type PlantLevel = 0 | 1 | 2
 

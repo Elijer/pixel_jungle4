@@ -1,7 +1,8 @@
 "use strict";
 exports.__esModule = true;
-exports.GameInstance = void 0;
 var config_js_1 = require("./config.js");
+var utilities_js_1 = require("./utilities.js");
+var logger_js_1 = require("./logger.js");
 var compass = [
     -config_js_1["default"].viewWidth - 1,
     -config_js_1["default"].viewWidth,
@@ -12,18 +13,92 @@ var compass = [
     config_js_1["default"].viewWidth,
     config_js_1["default"].viewWidth + 1,
 ];
-var GameInstance = /** @class */ (function () {
-    // predators: []
-    function GameInstance() {
-        this.entityCounter = 0;
-        this.entities = [];
-        this.positions = [];
-        this.energies = [];
-        this.levels = [];
+function createMap() {
+    var rows = 64;
+    var cols = 64;
+    var viewRows = 4;
+    var viewCols = 4;
+    var views = 16;
+    var positions = rows * cols * views;
+    return { rows: rows, cols: cols, viewRows: viewRows, viewCols: viewCols, views: views, positions: positions };
+}
+var map = createMap();
+// Normal Traits
+var entityCount = 0;
+var entities = new Set();
+var energies = new Map();
+var levels = new Map();
+var positions = new Map();
+var predator = new Set();
+// Reverse Trait Maps
+var positionsReverse = new Map();
+var socketsReverse = new Map();
+var q = new utilities_js_1.LIFIQueue(10);
+// ENTITY
+function createEntity() {
+    var entity = entityCount++;
+    entities.add(entity);
+    return entity;
+}
+function removeEntity(entity) {
+    entities["delete"](entity);
+}
+// POSITION
+function assignRandomPosition() {
+    return q.getNext();
+}
+function addPosition(entity, position) {
+    var _a;
+    try {
+        if (!positionsReverse.has(position))
+            positionsReverse.set(position, new Set());
+        (_a = positionsReverse.get(position)) === null || _a === void 0 ? void 0 : _a.add(entity);
+        positions.set(entity, position);
+        return true;
     }
-    return GameInstance;
-}());
-exports.GameInstance = GameInstance;
+    catch (e) {
+        return false;
+    }
+}
+function removePosition(entity) {
+    var _a, _b;
+    if (!positions.has(entity))
+        logger_js_1.warn("entity " + entity + " doesn't HAVE a position to remove");
+    var position = positions.get(entity);
+    (_a = positionsReverse.get(position)) === null || _a === void 0 ? void 0 : _a["delete"](entity);
+    if (!((_b = positionsReverse.get(position)) === null || _b === void 0 ? void 0 : _b.size)) {
+        positionsReverse["delete"](position);
+        q.reinsert(position);
+    }
+    positions["delete"](entity);
+}
+// SPATIAL ENTITY : ENTITY + POSITION
+function spawnSpatialEntity() {
+    var position = assignRandomPosition();
+    if (!position)
+        throw new Error("next tile in queue was undefined - queue may be broken or map is full");
+    createSpatialEntity(position);
+}
+function createSpatialEntity(position) {
+    var _a;
+    try {
+        if (position < 0)
+            throw new Error("invalid position to create spatial entity - less than 0");
+        if (position > map.positions)
+            throw new Error("can't create a spatial entity there - out of bounds");
+        var entity = createEntity();
+        if (!addPosition(entity, position))
+            throw new Error("couldn't add position to " + entity);
+        if (!positionsReverse.has(position))
+            positionsReverse.set(position, new Set());
+        (_a = positionsReverse.get(position)) === null || _a === void 0 ? void 0 : _a.add(entity);
+        positions.set(entity, position);
+    }
+    catch (e) {
+        logger_js_1.warn("Error while creating entity createEntity(): " + e);
+    }
+}
+// predators: []
 // type PlantLevel = 0 | 1 | 2
 // class Plant {
 //   game: GameInstance
