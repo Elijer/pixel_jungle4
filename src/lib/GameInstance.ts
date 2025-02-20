@@ -1,22 +1,6 @@
 import config from './config.js'
 import { warn} from './logger.js';
 
-const directions = [
-  // top row
-  [-1, -1],
-  [0, -1],
-  [1, -1],
-
-  // middle row
-  [-1, 0],
-  [1, 0],
-
-  // bottom row
-  [-1, 1],
-  [0, 1],
-  [1, 1]
-]
-
 const compass = [
   -config.viewWidth - 1,
   -config.viewWidth,
