@@ -1,63 +1,43 @@
-import config from './config.js'
-import { warn} from './logger.js';
-
-const compass = [
-  -config.viewWidth - 1,
-  -config.viewWidth,
-  -config.viewWidth + 1,
-  -1,
-  1,
-  config.viewWidth - 1,
-  config.viewWidth,
-  config.viewWidth + 1,
-]
-
-type TileNumber = number
-type Entity = number
-
-export class GameInstance {
-
-  /*
-  what how does this work? are they all hashes, or arrays?
-  I have a list of entities...
-  they are each associated with 
-  */
-
-  entityCounter: number
-  entities: number[]
-  spatialMap: Map<TileNumber, Set<Entity>>
-  energies: number[] // animals, 0-63
-  levels: number[] // plant, 0-3
-  // predators: []
-
-  constructor(){
-    this.entityCounter = 0
-    this.entities = []
-    this.positions = []
-    this.energies = []
-    this.levels = []
-  }
-}
-
+"use strict";
+exports.__esModule = true;
+exports.GameInstance = void 0;
+var config_js_1 = require("./config.js");
+var compass = [
+    -config_js_1["default"].viewWidth - 1,
+    -config_js_1["default"].viewWidth,
+    -config_js_1["default"].viewWidth + 1,
+    -1,
+    1,
+    config_js_1["default"].viewWidth - 1,
+    config_js_1["default"].viewWidth,
+    config_js_1["default"].viewWidth + 1,
+];
+var GameInstance = /** @class */ (function () {
+    // predators: []
+    function GameInstance() {
+        this.entityCounter = 0;
+        this.entities = [];
+        this.positions = [];
+        this.energies = [];
+        this.levels = [];
+    }
+    return GameInstance;
+}());
+exports.GameInstance = GameInstance;
 // type PlantLevel = 0 | 1 | 2
-
 // class Plant {
-  
 //   game: GameInstance
 //   level: PlantLevel
 //   lifespan: number
 //   tile: number
 //   reprostructions: [number, number]
 //   archetypicalLifespan: number
-
 //   static energyGrantedByLevel = [ 8, 16, 32 ]
-
 //     // Expressed in number of seconds * number of plantcycles per second
 //   // I'm gonna do about 10, to make sure movement isn't too jerky
 //   // The reprostruction randomness should handle staggering
 //   static lifespanByLevel = [160, 320, 640]
 //   static reproWindowAugmentBySoilRichness = [2.1, 2, 1.6, 1.2]
-
 //   constructor(game: GameInstance, lifespan: number, level: PlantLevel, tile: number){
 //     this.game = game
 //     this.level = level
@@ -66,11 +46,9 @@ export class GameInstance {
 //     this.tile = tile
 //     this.reprostructions = this.getBirthTimes()
 //   }
-
 //   decrementLifespan(): void {
 //     this.lifespan--
 //   }
-
 //   // So what this does is, for malnourished soil, generates reproductive times
 //   // That are more likely to occur after orgnanism is dead
 //   // effectively reducing chance of plants in poor soil to reproduce twice successfully
@@ -80,38 +58,31 @@ export class GameInstance {
 //     const reproWindowExpanded = Plant.reproWindowAugmentBySoilRichness[this.level]
 //     return Math.floor(Math.random() * archetypicalLifespan * reproWindowExpanded)
 //   }
-
 //   getBirthTimes = (): [number, number] => {
 //     const times: number[] = []
 //     times.push(this.predestinedBirthtime())
 //     times.push(this.predestinedBirthtime())
 //     return times.sort((a, b) => b - a) as [number, number]
 //   }
-
 //   dies(): void {
 //     this.game.plantGrid[this.tile] = null
 //   }
-  
 //   consumed(): number {
 //     this.dies()
 //     return Plant.energyGrantedByLevel[this.level]
 //   }
-
 //   getAllNeighborTiles(): number[] {
 //     const neighbs = []
 //     // const x = this.tile % config.viewWidth
 //     // const y = Math.floor(this.tile / config.viewWidth)
-
 //     for (const d of compass){
 //       const neighborTile = this.tile + d
-
 //       if (neighborTile >= 0 && neighborTile < config.totalTiles){
 //         neighbs.push(neighborTile)
 //       }
 //     }
 //     return neighbs
 //   }
-
 //   getNestableNeighborTiles(){
 //     const neighbs = this.getAllNeighborTiles()
 //     const nests = []
@@ -130,19 +101,16 @@ export class GameInstance {
 //     }
 //     return nests
 //   }
-
 //   getRandomNestTile(): number {
 //     const neighbs = this.getNestableNeighborTiles()
 //     const randomNestTile = Math.floor(Math.random() * neighbs.length)
 //     return neighbs[randomNestTile]
 //   }
-
 //   reproduce(): void {
 //     if (!this.reprostructions) warn('plant trying to reproduce past instructions')
 //     let childLifespan = this.reprostructions.pop()
 //     const nestTile = this.getRandomNestTile()
 //     let childLevel: PlantLevel = this.level
-
 //     // 1 in 8 chance
 //     if (this.level < 2 && Math.random() > .875 ){
 //       childLevel += 1
@@ -152,54 +120,41 @@ export class GameInstance {
 //     // TODO - is childLifespan ever undefined? It should be
 //     this.game.plantGrid[nestTile] = new Plant(this.game, childLifespan!, childLevel!, nestTile)
 //   }
-
 // }
-
 // export class GameInstance {
 //   plantGrid: (Plant | null)[]
-
 //   constructor(){
 //     this.plantGrid = Array.from({length: config.totalTiles}, ()=>null)
 //   }
-
 //   getRandomTile(): number {
 //     return Math.floor(Math.random() * this.plantGrid.length)
 //   }
-
 //   spawnPlant(){
 //     const randomTile = this.getRandomTile()
 //     this.plantGrid[randomTile] = new Plant(this, 160, 0, randomTile)
 //   }
-
 //   handlePlantLifecycles(){
 //     for (let p = 0; p < this.plantGrid.length; p++){
 //       if (!this.plantGrid[p]) continue
 //       // console.log(this.plantGrid[p]?.lifespan)
 //       const plant = this.plantGrid[p]
 //       if (plant){
-
 //         if (plant.lifespan <= 0){
 //           plant.dies()
 //         }
-
 //         plant.decrementLifespan()
 //         const nextReprostruction = plant.reprostructions[plant.reprostructions.length-1]
-        
 //         if (nextReprostruction <= plant.lifespan){
 //           plant.reproduce()
 //         }
-
 //       }
 //     }
 //   }
-
 //   getView(): Buffer {
 //     const viewSize = 4096; // 64x64 view
 //     const bitDepth = 2; // Each value needs 2 bits
 //     const bytesNeeded = viewSize / (8 / bitDepth); // 4 values per byte
-  
 //     const buffer = Buffer.alloc(bytesNeeded);
-
 //     for (let i = 0; i < viewSize; i += 4){
 //       let byte = 0;
 //       for (let j = 0; j < 4; j++){
@@ -212,10 +167,7 @@ export class GameInstance {
 //       }
 //       buffer[i / 4] = byte;
 //     }
-  
 //     // console.log(buffer)
-  
 //     return buffer;
 //   }
-  
 // }
