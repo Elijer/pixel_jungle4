@@ -42,8 +42,8 @@ function resizeCanvas() {
 
 // Generate a 64x64 grid with random colors
 function drawGrid() {
-    const gridSize = 64;
-    const squareSize = offscreenCanvas.width / gridSize;
+    // const gridSize = 64;
+    // const squareSize = offscreenCanvas.width / gridSize;
 
     // for (let row = 0; row < gridSize; row++) {
     //     for (let col = 0; col < gridSize; col++) {
