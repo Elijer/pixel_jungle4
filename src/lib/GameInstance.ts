@@ -17,12 +17,6 @@ type Entity = number
 
 export class GameInstance {
 
-  /*
-  what how does this work? are they all hashes, or arrays?
-  I have a list of entities...
-  they are each associated with 
-  */
-
   entityCounter: number
   entities: number[]
   spatialMap: Map<TileNumber, Set<Entity>>
