@@ -48,6 +48,10 @@ function recycleEntity(entity: Entity){
 // Normal Traits
 const energies: Map<Entity, number> = new Map()
 const levels: Map<Entity, Level> = new Map()
+
+// Lifespan and energy are gonna be pretty different actually.
+// should I combine them?
+// At least the decrement part?
 const lifespans: Map<Entity, number> = new Map()
 const positions: Map<Entity, Position> = new Map()
 const predators: Set<Entity> = new Set()
