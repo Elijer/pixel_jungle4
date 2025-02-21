@@ -9,7 +9,7 @@ for (let i=0; i < 10000; i++){
 
 setInterval(()=>{
   handlePlantLifecycle()
-}, 1000)
+}, 100)
 
 httpServer.listen(port, () => {
   log(`-->>> STARTED SERVER: ${port} <<<--`)
