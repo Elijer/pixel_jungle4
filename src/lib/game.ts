@@ -11,8 +11,8 @@ const lifespanArchectypes = [
 ]
 
 function getMapConfig(){
-  const rows = 16
-  const cols = 16
+  const rows = 64
+  const cols = 64
   const viewRows = 4
   const viewCols = 4
   const views = 16
@@ -211,10 +211,12 @@ export function createPlant(level: Level, position: Position | null = null, ): v
 
 function decrementLifespan(entity: Entity): void {
   if (lifespans.has(entity)){
-    const lifespan = lifespans.get(entity)
+    const lifespan = lifespans.get(entity)!
     if (lifespan === 0){
-      // remove
-    } // otherwise
+      removeEntityEntirely(entity)
+    } else {
+      lifespans.set(entity, lifespan - 1)
+    }
   }
 }
 
@@ -277,11 +279,6 @@ export function handlePlantLifecycle(): void {
       }
     }
 
-    lifespan--
-    if (lifespan === 0){
-      removeEntityEntirely(entity)
-    } else {
-      lifespans.set(entity, lifespan)
-    }
+    decrementLifespan(entity)
   }
 }

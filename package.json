@@ -6,7 +6,7 @@
   "scripts": {
     "tsc-v": "tsc --version",
     "ts": "tsc --w",
-    "dev": "cd client; npm run build; cd ..; nodemon",
+    "dev": "bun src/index.ts",
     "start": "bun -w src/index.ts",
     "serve-client": "cd client; npm run build; cd ..; tsc; node dist/index.js"
   },
