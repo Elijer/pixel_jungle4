@@ -46,8 +46,8 @@ function recycleEntity(entity: Entity){
 }
 
 // Normal Traits
-const energies: Map<Entity, number> = new Map()
-const levels: Map<Entity, Level> = new Map()
+const energies: (number | null )[] = []
+const levels: (Level | null )[] = []
 
 // Lifespan and energy are gonna be pretty different actually.
 // should I combine them?
@@ -89,8 +89,8 @@ function removeEntityEntirely(entity: Entity){
   try {
 
     // simple traits
-    energies.delete(entity)
-    levels.delete(entity)
+    energies[entity] = null
+    levels[entity] = null
     lifespans.delete(entity)
     predators.delete(entity)
     births.delete(entity)
@@ -192,7 +192,7 @@ export function createPlant(level: Level, position: Position | null = null, ): v
 
     // this can happen if there's no room - the -1 trickles up, and we fail to create a plant
     if (entity === -1) return
-    levels.set(entity, level)
+    levels[entity] = level
     const lifespan = lifespanArchectypes[level]
     lifespans.set(entity, lifespan)
 
@@ -252,7 +252,7 @@ function plantReproduce(entity: Entity): void {
   const position = positions.get(entity)
   if (!position) throw new Error(`plantReproduce failed to get parent location ${entity}`)
 
-  const level = levels.get(entity)!
+  const level = levels[entity]!
   const lifespan = lifespanArchectypes[level]
   if (!lifespan) throw new Error(`plantReproduce failed to get level of parent`)
 
