@@ -33,7 +33,7 @@ const compass = [
   map.cols + 1,
 ]
 
-let entityCount: Entity = 0
+let entityCount: Entity = 1 // start at 1, since array[0] checks return undefined, breaking a lot of checks of existence
 let recycledEntities: number[] = []
 
 const entities: Set<Entity> = new Set()
@@ -53,12 +53,13 @@ const levels: (Level | null )[] = []
 // should I combine them?
 // At least the decrement part?
 const lifespans: Map<Entity, number> = new Map()
-const positions: Map<Entity, Position> = new Map()
+// const positions: Map<Entity, Position> = new Map()
+const positions: (Position | null)[] = []
 const predators: Set<Entity> = new Set()
 const births: Map<Entity, number[]> = new Map()
 const sockets: Map<Entity, string> = new Map()
 
-// Reverse Trait Maps
+// Reverse Trait Mapso
 const entitiesByPosition: Map<Position, Set<Entity>> = new Map()
 const entitiesBySocket: Map<string, Entity> = new Map()
 
@@ -128,7 +129,7 @@ function addPosition(entity: Entity, position: Position, ): void {
     if (position < 0 || position > map.positions) throw new Error(`createSpatialEntity specified position outside of possible position range ${position}`)
     if (!entitiesByPosition.has(position)) entitiesByPosition.set(position, new Set())
       entitiesByPosition.get(position)?.add(entity)
-      positions.set(entity, position)
+      positions[entity] = position
   } catch(e) {
     throw new Error(`failed to add position ${e}`)
   }
@@ -136,15 +137,15 @@ function addPosition(entity: Entity, position: Position, ): void {
 
 // Removes from both position and entitiesByPosition
 function removePosition(entity: Entity): void {
-  if (!positions.has(entity)) warn(`entity ${entity} doesn't HAVE a position to remove`)
+  if (!positions[entity]) warn(`entity ${entity} doesn't HAVE a position to remove`)
     
-  const position = positions.get(entity)!
+  const position = positions[entity]!
   entitiesByPosition.get(position)?.delete(entity)
   if (!entitiesByPosition.get(position)?.size){
     entitiesByPosition.delete(position)
     queue.reinsert(position)
   }
-  positions.delete(entity)
+  positions[entity] = null
 }
 
 // SPATIAL ENTITY : ENTITY + POSITION
@@ -163,7 +164,7 @@ function createSpatialEntity(position: Position): Entity {
   try {
     const entity = createEntity()
     addPosition(entity, position)
-    positions.set(entity, position)
+    positions[entity] = position
     if (!entitiesByPosition.has(position)) entitiesByPosition.set(position, new Set())
     entitiesByPosition.get(position)?.add(entity)
     return entity
@@ -249,7 +250,7 @@ function plantReproduce(entity: Entity): void {
 
   if (!lifespans.has(entity)) warn(`${entity} is not a plant, and we can't get seed positions for it`)
 
-  const position = positions.get(entity)
+  const position = positions[entity]
   if (!position) throw new Error(`plantReproduce failed to get parent location ${entity}`)
 
   const level = levels[entity]!
