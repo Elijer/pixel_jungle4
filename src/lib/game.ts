@@ -52,14 +52,22 @@ const levels: (Level | null )[] = []
 // Lifespan and energy are gonna be pretty different actually.
 // should I combine them?
 // At least the decrement part?
-const lifespans: Map<Entity, number> = new Map()
-// const positions: Map<Entity, Position> = new Map()
+// const lifespans: Map<Entity, number> = new Map()
+
+// this is really dangerous, because it's easy to check to see if lifespan exists with
+// lifespan === 0, but... 0  is a falsey value.
+// It would probably be good to keep arrays entirely a single value.
+// null already takes up space, so what if 0 is reserved for nothing,
+// and a plant must have a lifespan of at least 1?
+// There will still be some that end up being undefined though, the sparse elements
+// so maybe typeof checks ARE the best way...
+const lifespans: ( number | null )[] = []
 const positions: (Position | null)[] = []
 const predators: Set<Entity> = new Set()
 const births: Map<Entity, number[]> = new Map()
 const sockets: Map<Entity, string> = new Map()
 
-// Reverse Trait Mapso
+// Reverse Trait Maps
 const entitiesByPosition: Map<Position, Set<Entity>> = new Map()
 const entitiesBySocket: Map<string, Entity> = new Map()
 
@@ -92,7 +100,8 @@ function removeEntityEntirely(entity: Entity){
     // simple traits
     energies[entity] = null
     levels[entity] = null
-    lifespans.delete(entity)
+    // lifespans.delete(entity)
+    lifespans[entity] = null
     predators.delete(entity)
     births.delete(entity)
 
@@ -195,7 +204,8 @@ export function createPlant(level: Level, position: Position | null = null, ): v
     if (entity === -1) return
     levels[entity] = level
     const lifespan = lifespanArchectypes[level]
-    lifespans.set(entity, lifespan)
+    // lifespans.set(entity, lifespan)
+    lifespans[entity] = lifespan
 
     
     const childBirthtimes: number[] = []
@@ -215,13 +225,12 @@ export function createPlant(level: Level, position: Position | null = null, ): v
 }
 
 function decrementLifespan(entity: Entity): void {
-  if (lifespans.has(entity)){
-    const lifespan = lifespans.get(entity)!
-    if (lifespan === 0){
-      removeEntityEntirely(entity)
-    } else {
-      lifespans.set(entity, lifespan - 1)
-    }
+  const lifespan = lifespans[entity]
+  if (lifespan === null || lifespan === undefined) return
+  if (lifespan === 0 ){
+    removeEntityEntirely(entity)
+  } else {
+    lifespans[entity] = lifespan! - 1
   }
 }
 
@@ -240,7 +249,8 @@ function lifespanAtPosition(position: Position): number {
   if (entitiesByPosition.has(position)){
     const inhabitants = entitiesByPosition.get(position)!
     for (const inhabitant of inhabitants){
-      if (lifespans.has(inhabitant)) return lifespans.get(inhabitant)!
+      // if (lifespans.has(inhabitant)) return lifespans.get(inhabitant)!
+      if (typeof lifespans[inhabitant] === "number") return lifespans[inhabitant]
     }
   }
   return 0
@@ -248,7 +258,8 @@ function lifespanAtPosition(position: Position): number {
 
 function plantReproduce(entity: Entity): void {
 
-  if (!lifespans.has(entity)) warn(`${entity} is not a plant, and we can't get seed positions for it`)
+  // if (!lifespans.has(entity)) warn(`${entity} is not a plant, and we can't get seed positions for it`)
+  if (!lifespans[entity]) warn(`${entity} is not a plant, and we can't get seed positions for it`)
 
   const position = positions[entity]
   if (!position) throw new Error(`plantReproduce failed to get parent location ${entity}`)
@@ -270,20 +281,24 @@ function plantReproduce(entity: Entity): void {
 
 export function handlePlantLifecycle(): void {
 
-  for (let [entity, lifespan] of lifespans){
+  // for (let [entity, lifespan] of lifespans){
+  for (const entity in lifespans){
+    const lifespan = lifespans[entity]
+    if (lifespan === null) continue
+    const entityNum = parseInt(entity)
 
-    if (births.has(entity)){
-      if (!births.get(entity)!.length){
-        births.delete(entity)
+    if (births.has(entityNum)){
+      if (!births.get(entityNum)!.length){
+        births.delete(entityNum)
       } else {
-        const birthTimes = births.get(entity)!
+        const birthTimes = births.get(entityNum)!
         if (birthTimes[birthTimes.length-1] >= lifespan){
           birthTimes.pop()
-          plantReproduce(entity)
+          plantReproduce(entityNum)
         }
       }
     }
 
-    decrementLifespan(entity)
+    decrementLifespan(entityNum)
   }
 }
