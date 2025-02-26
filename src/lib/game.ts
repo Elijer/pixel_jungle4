@@ -61,10 +61,11 @@ const levels: (Level | null )[] = []
 // and a plant must have a lifespan of at least 1?
 // There will still be some that end up being undefined though, the sparse elements
 // so maybe typeof checks ARE the best way...
-const lifespans: ( number | null )[] = []
+const lifespans: (number | null)[] = []
 const positions: (Position | null)[] = []
 const predators: Set<Entity> = new Set()
-const births: Map<Entity, number[]> = new Map()
+// const births: Map<Entity, number[]> = new Map()
+const births: (number[] | null)[] = []
 const sockets: Map<Entity, string> = new Map()
 
 // Reverse Trait Maps
@@ -87,7 +88,8 @@ function createEntity(): Entity {
   try {
     const entity = getEntityId()
     entities.add(entity)
-    console.log(`created ${entity}`)
+    // console.log(`created ${entity}`)
+    if (entity % 100000 === 0 ) console.log(`created ${entity}`)
     return entity
   } catch (e){
     throw new Error(`problem creating entity: ${e}`)
@@ -103,7 +105,8 @@ function removeEntityEntirely(entity: Entity){
     // lifespans.delete(entity)
     lifespans[entity] = null
     predators.delete(entity)
-    births.delete(entity)
+    // births.delete(entity)
+    births[entity]
 
     // more entangled traits
     removePosition(entity)
@@ -112,7 +115,8 @@ function removeEntityEntirely(entity: Entity){
     // entity itself
     entities.delete(entity)
     recycleEntity(entity)
-    console.log(`removed ${entity} entirely`)
+    // console.log(`removed ${entity} entirely`)
+    if (entity % 100000 === 0) console.log(`removed ${entity} entirely`)
   } catch (e){
     throw new Error(`problem removing entity ${entity} entirely: ${e}`)
   }
@@ -217,7 +221,8 @@ export function createPlant(level: Level, position: Position | null = null, ): v
     // later birthtime first so we can pop off the smaller one from the end
     childBirthtimes.sort((a, b)=>b-a)
     // Random lifespans determined here
-    births.set(entity, childBirthtimes)
+    // births.set(entity, childBirthtimes)
+    births[entity] = childBirthtimes
 
   } catch (e){
     throw new Error(`Failed to createPlant @ ${position}: ${e}`)
@@ -259,7 +264,7 @@ function lifespanAtPosition(position: Position): number {
 function plantReproduce(entity: Entity): void {
 
   // if (!lifespans.has(entity)) warn(`${entity} is not a plant, and we can't get seed positions for it`)
-  if (!lifespans[entity]) warn(`${entity} is not a plant, and we can't get seed positions for it`)
+  if (typeof lifespans[entity] !== "number") warn(`${entity} is not a plant, and we can't get seed positions for it`)
 
   const position = positions[entity]
   if (!position) throw new Error(`plantReproduce failed to get parent location ${entity}`)
@@ -287,11 +292,12 @@ export function handlePlantLifecycle(): void {
     if (lifespan === null) continue
     const entityNum = parseInt(entity)
 
-    if (births.has(entityNum)){
-      if (!births.get(entityNum)!.length){
-        births.delete(entityNum)
+    // if (births.has(entityNum)){
+    if (Array.isArray(births[entityNum])){
+      if (!births[entityNum].length){
+        births[entityNum] = null
       } else {
-        const birthTimes = births.get(entityNum)!
+        const birthTimes = births[entityNum]
         if (birthTimes[birthTimes.length-1] >= lifespan){
           birthTimes.pop()
           plantReproduce(entityNum)
