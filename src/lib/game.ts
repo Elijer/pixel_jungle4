@@ -2,7 +2,9 @@ import { LIFIQueue } from './utilities.js';
 import { warn} from './logger.js';
 
 type Entity = number
+type Energy = number
 type Level = 0 | 1 | 2
+type Lifespan = number
 type Position = number
 
 const lifespanArchectypes = [
@@ -33,7 +35,8 @@ const compass = [
   map.cols + 1,
 ]
 
-let entityCount: Entity = 1 // start at 1, since array[0] checks return undefined, breaking a lot of checks of existence
+// TODO: Maybe add a limit to the number of entities allowed?
+let entityCount: Entity = 1 // starting at 1 minimizes risk of incorrect entity existence checks
 let recycledEntities: number[] = []
 
 const entities: Set<Entity> = new Set()
@@ -46,33 +49,19 @@ function recycleEntity(entity: Entity){
 }
 
 // Normal Traits
-const energies: (number | null )[] = []
-const levels: (Level | null )[] = []
-
-// Lifespan and energy are gonna be pretty different actually.
-// should I combine them?
-// At least the decrement part?
-// const lifespans: Map<Entity, number> = new Map()
-
-// this is really dangerous, because it's easy to check to see if lifespan exists with
-// lifespan === 0, but... 0  is a falsey value.
-// It would probably be good to keep arrays entirely a single value.
-// null already takes up space, so what if 0 is reserved for nothing,
-// and a plant must have a lifespan of at least 1?
-// There will still be some that end up being undefined though, the sparse elements
-// so maybe typeof checks ARE the best way...
-const lifespans: (number | null)[] = []
-const positions: (Position | null)[] = []
+const energies: (Energy | undefined )[] = [] // energy and lifespans will actually end up being very similar values, interestingly
+const levels: (Level | undefined )[] = []
+const lifespans: (Lifespan | undefined)[] = []
+const positions: (Position | undefined)[] = []
 const predators: Set<Entity> = new Set()
-// const births: Map<Entity, number[]> = new Map()
-const births: (number[] | null)[] = []
+const births: (number[] | undefined)[] = []
 const sockets: Map<Entity, string> = new Map()
 
 // Reverse Trait Maps
-const entitiesByPosition: Map<Position, Set<Entity>> = new Map()
+const entitiesByPosition: (Set<Entity> | undefined)[] = []
 const entitiesBySocket: Map<string, Entity> = new Map()
 
-const queue = new LIFIQueue(map.positions);
+const randomVacancies = new LIFIQueue(map.positions);
 
 function getEntityId(): number {
   try {
@@ -88,8 +77,8 @@ function createEntity(): Entity {
   try {
     const entity = getEntityId()
     entities.add(entity)
-    // console.log(`created ${entity}`)
-    if (entity % 100000 === 0 ) console.log(`created ${entity}`)
+    console.log(`created ${entity}`)
+    // if (entity % 100000 === 0 ) console.log(`created ${entity/1000000}`)
     return entity
   } catch (e){
     throw new Error(`problem creating entity: ${e}`)
@@ -100,12 +89,10 @@ function removeEntityEntirely(entity: Entity){
   try {
 
     // simple traits
-    energies[entity] = null
-    levels[entity] = null
-    // lifespans.delete(entity)
-    lifespans[entity] = null
+    energies[entity] = undefined
+    levels[entity] = undefined
+    lifespans[entity] = undefined
     predators.delete(entity)
-    // births.delete(entity)
     births[entity]
 
     // more entangled traits
@@ -115,8 +102,8 @@ function removeEntityEntirely(entity: Entity){
     // entity itself
     entities.delete(entity)
     recycleEntity(entity)
-    // console.log(`removed ${entity} entirely`)
-    if (entity % 100000 === 0) console.log(`removed ${entity} entirely`)
+    console.log(`removed ${entity} entirely`)
+    // if (entity % 100000 === 0) console.log(`removed ${entity/1000000} entirely`)
   } catch (e){
     throw new Error(`problem removing entity ${entity} entirely: ${e}`)
   }
@@ -125,8 +112,7 @@ function removeEntityEntirely(entity: Entity){
 // POSITION
 function getRandomPositionValue(): number {
   try {
-    const nextPosition = queue.getNext()
-    // if (!nextPosition) throw new Error(`could not get nextPosition from next-random-position queue - this should never happen`)
+    const nextPosition = randomVacancies.getNext()
     if (!nextPosition){
       warn(`looks like there is no more space for now!`)
       return -1
@@ -140,9 +126,9 @@ function getRandomPositionValue(): number {
 function addPosition(entity: Entity, position: Position, ): void {
   try {
     if (position < 0 || position > map.positions) throw new Error(`createSpatialEntity specified position outside of possible position range ${position}`)
-    if (!entitiesByPosition.has(position)) entitiesByPosition.set(position, new Set())
-      entitiesByPosition.get(position)?.add(entity)
-      positions[entity] = position
+    if (!entitiesByPosition[position]) entitiesByPosition[position] = new Set()
+    entitiesByPosition[position].add(entity)
+    positions[entity] = position
   } catch(e) {
     throw new Error(`failed to add position ${e}`)
   }
@@ -153,16 +139,22 @@ function removePosition(entity: Entity): void {
   if (!positions[entity]) warn(`entity ${entity} doesn't HAVE a position to remove`)
     
   const position = positions[entity]!
-  entitiesByPosition.get(position)?.delete(entity)
-  if (!entitiesByPosition.get(position)?.size){
-    entitiesByPosition.delete(position)
-    queue.reinsert(position)
+  const entitiesAtPosition = entitiesByPosition[position]
+  if (entitiesAtPosition){
+    entitiesAtPosition.delete(entity)
+
+    // And if set at that position is now empty, remove the set and return that position to random insert queue
+    if (!entitiesAtPosition.size){
+      entitiesByPosition[position] = undefined
+      randomVacancies.reinsert(position)
+    }
+
   }
-  positions[entity] = null
+  positions[entity] = undefined
 }
 
 // SPATIAL ENTITY : ENTITY + POSITION
-function spawnSpatialEntity(position: Position | null = null): Entity {
+function spawnSpatialEntity(position: Position | undefined = undefined): Entity {
   try {
 
     const newEntityPosition = position ? position : getRandomPositionValue()!
@@ -178,8 +170,9 @@ function createSpatialEntity(position: Position): Entity {
     const entity = createEntity()
     addPosition(entity, position)
     positions[entity] = position
-    if (!entitiesByPosition.has(position)) entitiesByPosition.set(position, new Set())
-    entitiesByPosition.get(position)?.add(entity)
+    const entityAtPosition = entitiesByPosition[entity]
+    if (!entityAtPosition) entitiesByPosition[entity] = new Set()
+    entitiesByPosition[entity]?.add(entity)
     return entity
   } catch (e){
     throw new Error(`Error while creating entity createEntity(): ${e}`)
@@ -200,7 +193,7 @@ function removeSocket(entity: Entity): void {
 }
 
 // PLANTS
-export function createPlant(level: Level, position: Position | null = null, ): void {
+export function createPlant(level: Level, position: Position | undefined = undefined, ): void {
   try {
     let entity = spawnSpatialEntity(position)
 
@@ -208,20 +201,19 @@ export function createPlant(level: Level, position: Position | null = null, ): v
     if (entity === -1) return
     levels[entity] = level
     const lifespan = lifespanArchectypes[level]
-    // lifespans.set(entity, lifespan)
     lifespans[entity] = lifespan
 
     
     const childBirthtimes: number[] = []
     for (let i = 0; i < 2; i++){
-      // Get a random time that will occur within the organism's lifespan
+      // Get a random timestamp within organism's lifespan
+      // TODO: add minerals to influence this
       childBirthtimes.push(Math.floor(lifespan * Math.random()))
-      // This is also where minerals can come into pplay
     }
+
     // later birthtime first so we can pop off the smaller one from the end
     childBirthtimes.sort((a, b)=>b-a)
     // Random lifespans determined here
-    // births.set(entity, childBirthtimes)
     births[entity] = childBirthtimes
 
   } catch (e){
@@ -231,7 +223,7 @@ export function createPlant(level: Level, position: Position | null = null, ): v
 
 function decrementLifespan(entity: Entity): void {
   const lifespan = lifespans[entity]
-  if (lifespan === null || lifespan === undefined) return
+  if (lifespan === undefined) return
   if (lifespan === 0 ){
     removeEntityEntirely(entity)
   } else {
@@ -251,10 +243,9 @@ function getNeighborPositions(position: Position): Position[] {
 }
 
 function lifespanAtPosition(position: Position): number {
-  if (entitiesByPosition.has(position)){
-    const inhabitants = entitiesByPosition.get(position)!
+  const inhabitants = entitiesByPosition[position]
+  if (inhabitants){
     for (const inhabitant of inhabitants){
-      // if (lifespans.has(inhabitant)) return lifespans.get(inhabitant)!
       if (typeof lifespans[inhabitant] === "number") return lifespans[inhabitant]
     }
   }
@@ -263,7 +254,6 @@ function lifespanAtPosition(position: Position): number {
 
 function plantReproduce(entity: Entity): void {
 
-  // if (!lifespans.has(entity)) warn(`${entity} is not a plant, and we can't get seed positions for it`)
   if (typeof lifespans[entity] !== "number") warn(`${entity} is not a plant, and we can't get seed positions for it`)
 
   const position = positions[entity]
@@ -286,25 +276,25 @@ function plantReproduce(entity: Entity): void {
 
 export function handlePlantLifecycle(): void {
 
-  // for (let [entity, lifespan] of lifespans){
-  for (const entity in lifespans){
+  for (let entity = 0; entity < lifespans.length; entity++){
     const lifespan = lifespans[entity]
-    if (lifespan === null) continue
-    const entityNum = parseInt(entity)
+    if (lifespan === undefined) continue
 
-    // if (births.has(entityNum)){
-    if (Array.isArray(births[entityNum])){
-      if (!births[entityNum].length){
-        births[entityNum] = null
-      } else {
-        const birthTimes = births[entityNum]
-        if (birthTimes[birthTimes.length-1] >= lifespan){
-          birthTimes.pop()
-          plantReproduce(entityNum)
-        }
+    const birthTimes = births[entity]
+
+    if (Array.isArray(birthTimes)){
+
+      if (birthTimes.length === 0){
+        births[entity] = undefined
+        continue
+      }
+
+      if (birthTimes[birthTimes.length - 1] >= lifespan){
+        birthTimes.pop()
+        plantReproduce(entity)
       }
     }
 
-    decrementLifespan(entityNum)
+    decrementLifespan(entity)
   }
 }
