@@ -77,7 +77,10 @@ function createEntity(): Entity {
   try {
     const entity = getEntityId()
     entities.add(entity)
-    console.log(`created ${entity}`)
+    if (entity === 5000000){
+      console.timeEnd("5mil")
+    }
+    // console.log(`created ${entity}`)
     // if (entity % 100000 === 0 ) console.log(`created ${entity/1000000}`)
     return entity
   } catch (e){
@@ -102,7 +105,7 @@ function removeEntityEntirely(entity: Entity){
     // entity itself
     entities.delete(entity)
     recycleEntity(entity)
-    console.log(`removed ${entity} entirely`)
+    // console.log(`removed ${entity} entirely`)
     // if (entity % 100000 === 0) console.log(`removed ${entity/1000000} entirely`)
   } catch (e){
     throw new Error(`problem removing entity ${entity} entirely: ${e}`)
