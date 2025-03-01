@@ -1,5 +1,5 @@
 import { LIFIQueue } from './utilities.js';
-import { warn} from './logger.js';
+import { log, warn } from './logger.js';
 
 type Entity = number
 type Energy = number
@@ -8,8 +8,7 @@ type Lifespan = number
 type Position = number
 
 const lifespanArchectypes = [
-  // measured in 100s of ms
-  16, 32, 64
+  16, 32, 64 // measured in 100s of ms
 ]
 
 function getMapConfig(){
@@ -36,20 +35,21 @@ const compass = [
 ]
 
 // TODO: Maybe add a limit to the number of entities allowed?
-let entityCount: Entity = 1 // starting at 1 minimizes risk of incorrect entity existence checks
+let entityCount: Entity = 1 // starting at 1 avoids checking for 0, which can be fraught
 let recycledEntities: number[] = []
 
 const entities: Set<Entity> = new Set()
 
 function recycleEntity(entity: Entity){
-  if (recycledEntities.length > map.positions / 2){
-    recycledEntities = []
-  }
+  // If the number of recycled entities has grown to a really big number
+  // just purge them, we're not getting rid of them fast enough
+  // honestly though, if this is the case, there are probably other issues of scale
+  if (recycledEntities.length > map.positions / 2) recycledEntities = []
   recycledEntities.push(entity)
 }
 
 // Normal Traits
-const energies: (Energy | undefined )[] = [] // energy and lifespans will actually end up being very similar values, interestingly
+const energies: (Energy | undefined )[] = [] // energy and lifespans will actually end up being very similar values, interestingly: 0-63
 const levels: (Level | undefined )[] = []
 const lifespans: (Lifespan | undefined)[] = []
 const positions: (Position | undefined)[] = []
@@ -77,11 +77,8 @@ function createEntity(): Entity {
   try {
     const entity = getEntityId()
     entities.add(entity)
-    if (entity === 5000000){
-      console.timeEnd("5mil")
-    }
-    // console.log(`created ${entity}`)
-    // if (entity % 100000 === 0 ) console.log(`created ${entity/1000000}`)
+    console.log(`created ${entity}`)
+    // log(`created ${entity}`)
     return entity
   } catch (e){
     throw new Error(`problem creating entity: ${e}`)
@@ -92,23 +89,26 @@ function removeEntityEntirely(entity: Entity){
   try {
 
     // simple traits
-    energies[entity] = undefined
-    levels[entity] = undefined
+    energies[entity]  = undefined
+    levels[entity]    = undefined
     lifespans[entity] = undefined
-    predators.delete(entity)
-    births[entity]
+    births[entity]    = undefined
 
     // more entangled traits
     removePosition(entity)
     removeSocket(entity)
 
-    // entity itself
+    predators.delete(entity)
     entities.delete(entity)
+
     recycleEntity(entity)
-    // console.log(`removed ${entity} entirely`)
-    // if (entity % 100000 === 0) console.log(`removed ${entity/1000000} entirely`)
+    console.log(`removed ${entity} entirely`)
+    // log(`removed ${entity} entirely`)
+
   } catch (e){
-    throw new Error(`problem removing entity ${entity} entirely: ${e}`)
+    const msg = `problem removing entity ${entity} entirely: ${e}`
+    warn(msg)
+    throw new Error(msg)
   }
 }
 
@@ -122,18 +122,29 @@ function getRandomPositionValue(): number {
     }
     return nextPosition
   } catch (e){
-    throw new Error(`${e}`)
+    const msg = `${e}`
+    warn(msg)
+    throw new Error(msg)
   }
 }
 
 function addPosition(entity: Entity, position: Position, ): void {
   try {
-    if (position < 0 || position > map.positions) throw new Error(`createSpatialEntity specified position outside of possible position range ${position}`)
-    if (!entitiesByPosition[position]) entitiesByPosition[position] = new Set()
+
+    if (position < 0 || position > map.positions){
+      throw new Error(`createSpatialEntity specified position outside of possible position range ${position}`)
+    }
+
+    if (!entitiesByPosition[position]){
+      entitiesByPosition[position] = new Set()
+    }
+    
     entitiesByPosition[position].add(entity)
     positions[entity] = position
   } catch(e) {
-    throw new Error(`failed to add position ${e}`)
+    const msg = `failed to add position ${e}`
+    warn(msg)
+    throw new Error(msg)
   }
 }
 
@@ -159,10 +170,9 @@ function removePosition(entity: Entity): void {
 // SPATIAL ENTITY : ENTITY + POSITION
 function spawnSpatialEntity(position: Position | undefined = undefined): Entity {
   try {
-
     const newEntityPosition = position ? position : getRandomPositionValue()!
     if (newEntityPosition === -1) return -1
-    return createSpatialEntity(newEntityPosition) 
+    return createSpatialEntity(newEntityPosition)
   } catch (e){
     throw new Error(`Error while spawning entity createEntity(): ${e}`)
   }
@@ -220,7 +230,9 @@ export function createPlant(level: Level, position: Position | undefined = undef
     births[entity] = childBirthtimes
 
   } catch (e){
-    throw new Error(`Failed to createPlant @ ${position}: ${e}`)
+    const msg = `Failed to createPlant @ ${position}: ${e}`
+    warn(msg)
+    throw new Error(msg)
   }
 }
 

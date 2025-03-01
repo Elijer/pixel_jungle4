@@ -11,7 +11,8 @@ for (let i=0; i < 10000; i++){
 
 setInterval(()=>{
   handlePlantLifecycle()
-}, .1)
+  // Around here, I have to actually send some data
+}, 100)
 
 httpServer.listen(port, () => {
   log(`-->>> STARTED SERVER: ${port} <<<--`)

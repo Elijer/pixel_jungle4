@@ -16,7 +16,7 @@ class Logger {
 
     console.log(logEntry);
 
-    fs.appendFile(this.logFilePath, logEntry, (err) => {
+    fs.appendFile(this.logFilePath, logEntry + "\n", (err) => {
       if (err) {
         console.error('Error writing to log file:', err);
       }

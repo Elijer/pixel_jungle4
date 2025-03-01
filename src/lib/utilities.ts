@@ -16,6 +16,24 @@ class ListNode {
   }
 }
 
+/**
+ * 
+ * Sort of like a modified linked list
+ * Initialized with values from a range shuffled into a random order
+ * It then allows for popping them out the "front"
+ * and pushing additional ones in the back
+ * It's purpose is to maintain a random list of all vacant tiles on the map
+ * 
+ * It's weakness is that, although it starts shuffled
+ * the order of the positions pushed retain the order they are pushed in
+ * so if there is a pattern to the way they are added,
+ * that pattern will eventually surface once all initially shuffled positions are exhausted
+ * 
+ * This weakness could be addressed if I can create an O(1) method for
+ * pushing new values into a random spot in the array.
+ * 
+ */
+
 export class LIFIQueue {
   private head: ListNode | null = null;
   private tail: ListNode | null = null;
