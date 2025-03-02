@@ -38,14 +38,9 @@ const map = getMapConfig()
 // I think technically, at edges of maps when used, this will hop the map in a few cases
 // but maybe it's fine for now
 const compass = [
-  -257,
-  // -map.totalCols,
-  // -map.totalCols + 1,
-  // -1,
-  // 1,
-  // map.totalCols - 1,
-  // map.totalCols,
-  // map.totalCols + 1,
+  -257, -256, -255
+  -1, 1,
+  255, 256, 257
 ]
 
 // TODO: Maybe add a limit to the number of entities allowed?
@@ -182,15 +177,15 @@ function removePosition(entity: Entity): void {
 }
 
 // SPATIAL ENTITY : ENTITY + POSITION
-function spawnSpatialEntity(position: Position | undefined = undefined): Entity {
-  try {
-    const newEntityPosition = position ? position : getRandomPositionValue()!
-    if (newEntityPosition === -1) return -1
-    return createSpatialEntity(newEntityPosition)
-  } catch (e){
-    throw new Error(`Error while spawning entity createEntity(): ${e}`)
-  }
-}
+// function spawnSpatialEntity(position: Position): Entity {
+//   try {
+//     // const newEntityPosition = position ? position : getRandomPositionValue()!
+//     // if (newEntityPosition === -1) return -1
+//     return createSpatialEntity(position)
+//   } catch (e){
+//     throw new Error(`Error while spawning entity createEntity(): ${e}`)
+//   }
+// }
 
 function createSpatialEntity(position: Position): Entity {
   try {
@@ -222,8 +217,10 @@ export function createPlant(level: Level, position: Position | undefined = undef
     
     // prevent possibility of multiple plants in the same place
     if (position && inhabitantsAtPosition(position)) return
+    if (!position) return
 
-    let entity = spawnSpatialEntity(position)
+    // let entity = spawnSpatialEntity(position)
+    let entity = createSpatialEntity(position)
 
     // this can happen if there's no room - the -1 trickles up, and we fail to create a plant
     if (entity === -1) return
@@ -361,81 +358,50 @@ export function getViewAsBuffer(position: number): Buffer {
   const bitDepth = 2; // Each value needs 2 bits
   const bytesNeeded = viewSize / (8 / bitDepth); // 1024 bytes
   const buffer = Buffer.alloc(bytesNeeded);
-
-  // Determine which view they are in
-  const view = Math.floor(position / map.positionsPerView);
-  const viewCol = view % 4; // Which fourth of each row this view corresponds to
-  const firstRowInView = Math.floor(view / 4) * 64; // Find the first row
-  // const firstPositionInView = view * map.positionsPerView;
-
-  let tempArray: (0 | 1 | 2 | 3)[] = Array.from({length: viewSize}, ()=>0)
-
-  // Extract values for the 64x64 section
-  for (let row = 0; row < 64; row++){
-    for (let col = 0; col < 64; col++){
-      const mapRow = firstRowInView + row
-      const mapCol = viewCol * 64 + col
-      const pos = mapRow * 256 + mapCol
-
-      const entitiesAtPosition = entitiesByPosition[pos];
+  
+  const y = Math.floor(position / 256);
+  const x = position % 256;
+  const viewCol = Math.floor(x / 64); // View columns are 64 wide, not 4
+  const viewRow = Math.floor(y / 64); // View rows are 64 high, not 4
+  
+  let tempArray: (0 | 1 | 2 | 3)[] = Array.from({length: viewSize}, () => 0);
+  
+  // Iterate through the current view's area
+  for (let localRow = 0; localRow < 64; localRow++) {
+    for (let localCol = 0; localCol < 64; localCol++) {
+      // Calculate global position
+      const globalRow = viewRow * 64 + localRow;
+      const globalCol = viewCol * 64 + localCol;
+      const globalPos = globalRow * 256 + globalCol;
+      
+      // Calculate local index in the tempArray (0-4095)
+      const localIndex = localRow * 64 + localCol;
+      
+      const entitiesAtPosition = entitiesByPosition[globalPos];
       if (entitiesAtPosition?.size) {
-  
         for (let entity of entitiesAtPosition) {
-  
-          // aminal
-          // don't have any of these yet
-          // const energy = energies[entity];
-          // if (typeof energy === "number") {
-          //   tempArray[i] = splitUp64(energy) as 0 | 1 | 2 | 3;
-          //   break;
-          // }
-  
-          // plont
           const lifespan = lifespans[entity];
           if (typeof lifespan === "number") {
-            tempArray[row * map.cols + col] = splitUp64(lifespan) as 0 | 1 | 2 | 3;
+            // Use localIndex instead of globalPos here!
+            tempArray[localIndex] = splitUp64(lifespan) as 0 | 1 | 2 | 3;
+            break; // Only use the first entity's lifespan
           }
         }
       }
     }
   }
-
-
-  // for (let i = 0; i < viewSize; i++) {
-  //   const pos = firstPositionInView + i
-
-  //   const entitiesAtPosition = entitiesByPosition[pos];
-  //   if (entitiesAtPosition?.size) {
-
-  //     for (let entity of entitiesAtPosition) {
-
-  //       // aminal
-  //       // don't have any of these yet
-  //       // const energy = energies[entity];
-  //       // if (typeof energy === "number") {
-  //       //   tempArray[i] = splitUp64(energy) as 0 | 1 | 2 | 3;
-  //       //   break;
-  //       // }
-
-  //       // plont
-  //       const lifespan = lifespans[entity];
-  //       if (typeof lifespan === "number") {
-  //         tempArray[i] = splitUp64(lifespan) as 0 | 1 | 2 | 3;
-  //       }
-  //     }
-  //   }
-  // }
-
-  // Pack the values into the buffer
+  
+  // Pack the values into the buffer in a logical left-to-right order
   for (let i = 0; i < 1024; i++) {
-    const v1 = tempArray[i * 4] & 0b11; // bitwise AND is wild
-    const v2 = tempArray[i * 4 + 1] & 0b11;
-    const v3 = tempArray[i * 4 + 2] & 0b11;
-    const v4 = tempArray[i * 4 + 3] & 0b11;
-    buffer[i] = (v1 << 6) | (v2 << 4) | (v3 << 2) | v4;
+    const v1 = tempArray[i * 4] & 0b11;     // First value (leftmost)
+    const v2 = tempArray[i * 4 + 1] & 0b11;  // Second value
+    const v3 = tempArray[i * 4 + 2] & 0b11;  // Third value
+    const v4 = tempArray[i * 4 + 3] & 0b11;  // Fourth value (rightmost)
     
+    // Pack them with v1 in the lowest bits (makes unpacking more intuitive)
+    buffer[i] = (v4 << 6) | (v3 << 4) | (v2 << 2) | v1;
   }
-
+  
   return buffer;
 }
 
