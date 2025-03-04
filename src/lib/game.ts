@@ -1,5 +1,10 @@
 import { LIFIQueue } from './utilities.js';
 import { log, warn } from './logger.js';
+import { debug } from 'console';
+
+let debugMode = true
+let entityCounter = 0
+let maxEntityNumberReached = 1
 
 type Entity = number
 type Energy = number
@@ -25,12 +30,12 @@ function getMapConfig(){
   const cols = 64
   const viewRows = 4
   const viewCols = 4
-  const totalRows = viewRows * rows
+  const views = viewRows * viewCols
+  const tr = viewRows * rows
   const totalCols = viewCols * cols
-  const views = 16
-  const positionsPerView = rows * cols
-  const positions = positionsPerView * views
-  return {rows, cols, viewRows, viewCols, views, totalCols, totalRows, positionsPerView, positions}
+  const ppv = rows * cols // positions per view
+  const positions = ppv * views
+  return {rows, cols, viewRows, viewCols, views, totalCols, tr, ppv, positions}
 }
 
 const map = getMapConfig()
@@ -38,22 +43,22 @@ const map = getMapConfig()
 // I think technically, at edges of maps when used, this will hop the map in a few cases
 // but maybe it's fine for now
 const compass = [
-  -257, -256, -255
+  -map.tr - 1,
+  -map.tr,
+  -map.tr + 1,
   -1, 1,
-  255, 256, 257
+  map.tr - 1,
+  map.tr,
+  map.tr + 1
 ]
 
-// TODO: Maybe add a limit to the number of entities allowed?
-let entityCount: Entity = 1 // starting at 1 avoids checking for 0, which can be fraught
+let entityCount: Entity = 0 // 0 is avoided since entity counter begins by adding 1 - this is good, since 0 can be fraught
 let recycledEntities: number[] = []
 
 const entities: Set<Entity> = new Set()
 
 function recycleEntity(entity: Entity){
-  // If the number of recycled entities has grown to a really big number
-  // just purge them, we're not getting rid of them fast enough
-  // honestly though, if this is the case, there are probably other issues of scale
-  if (recycledEntities.length > map.positions / 2) recycledEntities = []
+  // if (recycledEntities.length > map.positions / 2) recycledEntities = [] // I don't think I should every need this
   recycledEntities.push(entity)
 }
 
@@ -75,7 +80,12 @@ const randomVacancies = new LIFIQueue(map.positions);
 function getEntityId(): number {
   try {
     if (recycledEntities.length > 0) return recycledEntities.pop()!
-    return entityCount++
+    entityCount++
+    entityCounter++
+    if (debugMode){
+      maxEntityNumberReached = Math.max(entityCount, maxEntityNumberReached)
+    }
+    return entityCount
   } catch (e){
     throw new Error(`problem creating entityId: ${e}`)
   }
@@ -113,6 +123,8 @@ function removeEntityEntirely(entity: Entity){
     recycleEntity(entity)
     // console.log(`removed ${entity} entirely`)
     // log(`removed ${entity} entirely`)
+
+    entityCounter--
 
   } catch (e){
     const msg = `problem removing entity ${entity} entirely: ${e}`
@@ -213,7 +225,6 @@ function removeSocket(entity: Entity): void {
 // PLANTS
 export function createPlant(level: Level, position: Position | undefined = undefined, ): void {
   try {
-    console.log("CREATING PLANT AT POS", position)
     
     // prevent possibility of multiple plants in the same place
     if (position && inhabitantsAtPosition(position)) return
@@ -318,6 +329,16 @@ function plantReproduce(entity: Entity): void {
 
 export function handlePlantLifecycles(): void {
 
+  if (debugMode){
+    console.log(
+      `
+      Highest entity #: ${maxEntityNumberReached},
+      # of entities   : ${entityCount},
+      Ready to Recycle: ${recycledEntities.length}
+      `
+    )
+  }
+
   for (let entity = 0; entity < lifespans.length; entity++){
 
     const lifespan = lifespans[entity]
@@ -363,6 +384,9 @@ export function getViewAsBuffer(position: number): Buffer {
   const x = position % 256;
   const viewCol = Math.floor(x / 64); // View columns are 64 wide, not 4
   const viewRow = Math.floor(y / 64); // View rows are 64 high, not 4
+  if (debugMode){
+    console.log(`view coords are`, {y, x})
+  }
   
   let tempArray: (0 | 1 | 2 | 3)[] = Array.from({length: viewSize}, () => 0);
   
