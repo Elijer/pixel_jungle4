@@ -16,28 +16,63 @@ const offscreenCtx = offscreenCanvas.getContext("2d");
 const colors = ["black", "yellow", "orange", "red"]
 
 socket.on("connect", ()=> {
-  
-  socket.on("view", (buff) => {
-    const squareSize = offscreenCanvas.width / 64;
-    const dv = new DataView(buff);
-    
-    for (let i = 0; i < dv.byteLength; i++) {
-      const byte = dv.getUint8(i);
+
+  const listenerController = new AbortController();
+  const { signal } = listenerController; // add this to key bindings to efficiently clean them up
+
+  socket.off("initialData")
+  socket.on("initialData", (initialData)=>{
+
+    // By wrapping everything in initial data, we can ensure that the server gets the first word
+    // this helps for things like deferring to the server for map size
+    // or for entity ID
+    // which we want - for now at least, the client gets no say in player ID
+    // and players can't persist over multiple sessions
+    // they die on disconnect, to keep things simple for now
+
+    // This is called on initial connection
+    // AND whenever the player changes view
+    socket.on("view", (buff) => {
+      const squareSize = offscreenCanvas.width / 64;
+      const dv = new DataView(buff);
       
-      // Unpack in simple ascending order
-      for (let j = 0; j < 4; j++) {
-        const v = (byte >> (2 * j)) & 0b11;
+      for (let i = 0; i < dv.byteLength; i++) {
+        const byte = dv.getUint8(i);
         
-        const color = colors[v];
-        const tileNum = i * 4 + j;
-        const row = Math.floor(tileNum / 64);
-        const col = tileNum % 64;
-        
-        offscreenCtx!.fillStyle = color;
-        offscreenCtx!.fillRect(col * squareSize, row * squareSize, squareSize, squareSize);
+        // Unpack in simple ascending order
+        for (let j = 0; j < 4; j++) {
+          const v = (byte >> (2 * j)) & 0b11;
+          
+          const color = colors[v];
+          const tileNum = i * 4 + j;
+          const row = Math.floor(tileNum / 64);
+          const col = tileNum % 64;
+          
+          offscreenCtx!.fillStyle = color;
+          offscreenCtx!.fillRect(col * squareSize, row * squareSize, squareSize, squareSize);
+        }
       }
-    }
-  });
+    });
+
+    // And THIS is called whenever anything in the map moves
+    // OR if the player moves
+    // (starting out we won't do any optimistic updates for movement / player actions, 
+    // cause honestly we don't have to - updates are very fast
+    // Although...they will have some latency. So, it would improve the experience quite a bit
+    // to do optimistic updates,
+    // but again, not my first priority
+    // )
+    socket.on("upate", (buff) => {
+      
+    })
+
+  })
+
+  socket.on("disconnect", ()=>{
+    listenerController.abort();
+    // document.removeEventListener("keydown", controlsListener)
+  })
+
 })
 
 
