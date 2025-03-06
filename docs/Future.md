@@ -1,3 +1,20 @@
+# WIP
+Okay so here's my work and what I've done
+@C - updateBasedSocketEvents branch: I made some progress with updating the socket events to handle updates AND full view updates, pulling code from pixel_jungle3 (which is rock solid and recommend to continue using for guidance).
+@B - binaryRepMap branch: I started sketching out a way to have a sort of persistent binary representation of the map at any given point, so that view updates don't need to recompute from scratch every time, which doesn't really make sense. This is a big project because I need EVERY state change to do this, and I also need to wrap my head around how to use binary operations
+
+But what I want to do before either of these is to separate positions and getEntityByPosition into plantPositions and animalPositions, AND getPlantByPosition and getAnimalByPosition, since these two different entity types are able to occupy the same spaces. I'm relatively confident this will make the codebase much easier to work with, and it will definitely get rid of some (theoretical) performance bottlenecks. In reality, it's plenty fast, but it just kind of pains me to work with, and @B will end up interacting with the system pretty extensively, so it makes sense to do this first.
+
+However, if this DOESN'T end up working out, I want the changes here to be isolated so I can roll them back without affecting C or B
+
+So that means my plan of attack will be:
+
+A - separate the positions in ECS state
+B - Create a write-heavy read-lite binary representation of state
+C - Return back to sockets, where I can continue the re-architecture where an initial view is sent, and after that, only updates.
+
+After that, we have player interaction, computing views when players change screens, minerals grids, and all sorts of other fun stuff.
+
 # Guiding Principles
 - walk before run - "I'd like to have 1mil squares!" is that important to the mvp? No. Stick to one thing at a time. You already have a lot of complexity. I've found a lot of joy and power in keeping things simple. Don't stray.
 - Multiplayer - integrate an actually interesting, playable game into this
