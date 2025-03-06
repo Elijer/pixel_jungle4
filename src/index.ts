@@ -1,44 +1,72 @@
-import setupServer from './lib/setupServer.js';
+// import setupServer from './lib/setupServer.js';
+// const { io, port, httpServer } = setupServer();
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import express from 'express';
+import path from 'path';
+import { dirname } from './lib/utilities.js';
 import { log } from './lib/logger.js';
-import { GameInstance } from './lib/GameInstance.js';
-const { io, port, httpServer } = setupServer();
+import { handlePlantLifecycles, createPlant, getViewAsBuffer } from './lib/game.js';
 
-const game = new GameInstance()
+const app = express();
+const httpServer = createServer(app);
+const pathToBuild = path.join(dirname(), '../../', 'client', 'dist')
+app.use(express.static(pathToBuild));
 
-for (let i=0; i < 10000; i++){
-  game.spawnPlant()
-  game.spawnPlant()
-  game.spawnPlant()
-  game.spawnPlant()
-}
+// Heroku passes the PORT env into the environment
+let port = process.env.PORT || 3000;
 
-setInterval(()=>{
-  game.handlePlantLifecycles()
-  const viewBuffer = game.getView();
-  io.emit("view", viewBuffer);
-}, 100)
+const io = new Server(httpServer, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
 
 io.on("connection", (socket) => {
-  log("server connected")
-  socket.emit("init", `SYSTEMS GO BRO`)
-  socket.on("client-confirm", (msg)=>{
-    log(`client confirmation: ${msg}`)
+  socket.emit("initialData", {
+    // send player id,
+    // maybe the initial update? or keep that in its own event
+    // player location, which yeah, should be with the view
+    // config like mapsize,
+    // yeah!
   })
 
-  // Emit a binary buffer to the client as an example
-  // const buffer = Buffer.from([0x01, 0x02, 0x03, 0x04]); // example binary data
-  // socket.emit("bin", buffer);
+  socket.on("player joined", (playerId) => {
+    // and then this part means that
+    // The player received the initial data and they've joined
+    // Maybe THIS is actually where they should the initial view?
+  })
 
-  // setInterval(() => {
-  //   const viewBuffer = game.getView();
-  //   io.emit("view", viewBuffer);
-  // }, 200);
+  socket.on("input", (input)=>{
+    // yup player moved or ate something!
+    // Gotta update state accordingly
+  })
 
-  // socket.on("request-view", () => {
-  //   const viewBuffer = game.getView();
-  //   socket.emit("view-update", viewBuffer);
-  // });
+  socket.on("disconnecting", async(reason) => {
+    // handle disconnect - 
+    // teardown the player, etc.
+  })
 })
+
+createPlant(0, 1) // at midpoint
+createPlant(0, 320) // at midpoint
+createPlant(0, 8200) // at midpoint
+
+setInterval(()=>{
+  handlePlantLifecycles()
+  // So this is where I will have a global list of subscriptions
+  // And as players join, and as they move
+  // I will keep them subscribed to whatever view they are in
+  // And they will receive all changes to that view as they happen.
+  // which I guess will be kinda tricky -
+  // Will I have to pass the socket to the handlePlantLifeCycles?
+
+  // const buff = getViewAsBuffer(1)
+  // io.emit("view", new Uint8Array(buff)); // 4096 value is an example of a player who is actually in the first view, since it's the first position of the second row of the master grid
+  // this actually will happen within connection...
+}, 100)
 
 httpServer.listen(port, () => {
   log(`-->>> STARTED SERVER: ${port} <<<--`)

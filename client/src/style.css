@@ -2,7 +2,7 @@ body {
   font-family: 'Courier New', Courier, monospace;
   color: rgb(51, 46, 46);
   margin: 0; /* Remove default margin */
-  background: black;
+  background: rgb(47, 47, 47);
   display: flex;
   justify-content: center;
   align-items: center;
