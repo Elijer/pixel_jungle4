@@ -16,13 +16,13 @@ const lifespanArchetypes = [
   16, 32, 64 // measured in 100s of ms
 ]
 
-function splitUp64(num: number): (0 | 1 | 2 | 3) {
+function splitUp64(num: number | undefined): (0 | 1 | 2 | 3) {
+  if (!num) return 0
   // values should be 0-63 inclusive, a total of 64 values
   // So in this case, 0 for lifespan or for energy is synonymous with nonexistence, not the step before it
   if (num > 31) return 3
   if (num > 15) return 2
-  if (num > 0) return 1
-  return 0
+  return 1
 }
 
 function getMapConfig(){
@@ -66,13 +66,21 @@ function recycleEntity(entity: Entity){
 const energies: (Energy | undefined )[] = [] // energy and lifespans will actually end up being very similar values, interestingly: 0-63
 const levels: (Level | undefined )[] = []
 const lifespans: (Lifespan | undefined)[] = []
-const positions: (Position | undefined)[] = []
+
+// const positions: (Position | undefined)[] = []
+// this brainfucks me sometimes - the index here is the entity, which gets recycled
+// the value is the position. So if you know the entity, you can use it as an index to search for position
+const animalPositions: (Position | undefined)[] = []
+const plantPositions: (Position | undefined)[] = []
+
 const predators: Set<Entity> = new Set()
 const births: (number[] | undefined)[] = []
 const sockets: Map<Entity, string> = new Map()
 
 // Reverse Trait Maps
-const entitiesByPosition: (Set<Entity> | undefined)[] = []
+// Whereas in these, the index is actually the position on the map 
+const animalsByPosition: (Entity | undefined)[] = Array.from({length: map.positions})
+const plantsByPosition: (Entity | undefined)[] = Array.from({length: map.positions})
 const entitiesBySocket: Map<string, Entity> = new Map()
 
 const randomVacancies = new LIFIQueue(map.positions);
@@ -149,19 +157,22 @@ function getRandomPositionValue(): number {
   }
 }
 
-function addPosition(entity: Entity, position: Position, ): void {
+// Generic that can be used with plants or animals
+function addPosition(
+  entity: Entity,
+  position: Position,
+  positions: (Position | undefined)[],
+  entitiesByPosition: (Position | undefined)[]): void 
+{
   try {
 
     if (position < 0 || position > map.positions){
-      throw new Error(`createSpatialEntity specified position outside of possible position range ${position}`)
-    }
-
-    if (!entitiesByPosition[position]){
-      entitiesByPosition[position] = new Set()
+      throw new Error(`can't add position ${position}: out of bounds`)
     }
     
-    entitiesByPosition[position].add(entity)
+    entitiesByPosition[position] = entity
     positions[entity] = position
+
   } catch(e) {
     const msg = `failed to add position ${e}`
     warn(msg)
@@ -171,21 +182,25 @@ function addPosition(entity: Entity, position: Position, ): void {
 
 // Removes from both position and entitiesByPosition
 function removePosition(entity: Entity): void {
-  if (!positions[entity]) warn(`entity ${entity} doesn't HAVE a position to remove`)
-    
-  const position = positions[entity]!
-  const entitiesAtPosition = entitiesByPosition[position]
-  if (entitiesAtPosition){
-    entitiesAtPosition.delete(entity)
 
-    // And if set at that position is now empty, remove the set and return that position to random insert queue
-    if (!entitiesAtPosition.size){
-      entitiesByPosition[position] = undefined
-      randomVacancies.reinsert(position)
-    }
-
+  const plantPosition = plantPositions[entity]
+  if (plantPosition){
+    plantPositions[entity]=undefined
+    plantsByPosition[plantPosition]=undefined
   }
-  positions[entity] = undefined
+
+  const animalPosition = animalPositions[entity]   // Not planning on any entity existing in both animalPositions AND plantPositions
+  if (animalPosition){                             // but better to check
+    animalPositions[entity]=undefined              // not even totally clear what that would be
+    animalsByPosition[animalPosition]=undefined    // maybe a swamp man or something
+  }                                                // half man, half plant
+
+  const anyPosition = plantPosition ?? animalPosition
+  if (anyPosition){
+    randomVacancies.reinsert(anyPosition)
+  } else {
+    warn(`entity ${entity} didn't HAVE a position to remove`)
+  }
 }
 
 // SPATIAL ENTITY : ENTITY + POSITION
@@ -199,10 +214,14 @@ function removePosition(entity: Entity): void {
 //   }
 // }
 
-function createSpatialEntity(position: Position): Entity {
+function createSpatialEntity(
+  position: Position,
+  positions: (Position | undefined)[],
+  entitiesByPosition: (Entity | undefined)[]
+): Entity {
   try {
     const entity = createEntity()
-    addPosition(entity, position)
+    addPosition(entity, position, positions, entitiesByPosition)
     return entity
   } catch (e){
     throw new Error(`Error while creating entity createEntity(): ${e}`)
@@ -231,14 +250,13 @@ export function createPlant(level: Level, position: Position | undefined = undef
     if (!position) return
 
     // let entity = spawnSpatialEntity(position)
-    let entity = createSpatialEntity(position)
+    let entity = createSpatialEntity(position, plantPositions, plantsByPosition)
 
     // this can happen if there's no room - the -1 trickles up, and we fail to create a plant
     if (entity === -1) return
     levels[entity] = level
     const lifespan = lifespanArchetypes[level]
     lifespans[entity] = lifespan
-
     
     const childBirthtimes: number[] = []
     for (let i = 0; i < 2; i++){
@@ -287,8 +305,9 @@ function getNeighborPositions(position: Position): Position[] {
 }
 
 function inhabitantsAtPosition(position: Position): boolean {
-  const inhabitants = entitiesByPosition[position]
-  if (inhabitants) return true
+  for (let positions of [plantsByPosition, animalsByPosition]){
+    if (positions[position]) return true
+  }
   return false
 }
 
@@ -306,7 +325,7 @@ function plantReproduce(entity: Entity): void {
 
   if (typeof lifespans[entity] !== "number") warn(`${entity} is not a plant, and we can't get seed positions for it`)
 
-  const position = positions[entity]
+  const position = plantPositions[entity]
   if (!position) throw new Error(`plantReproduce failed to get parent location ${entity}`)
 
   const level = levels[entity]!
@@ -328,6 +347,7 @@ function plantReproduce(entity: Entity): void {
 }
 
 export function handlePlantLifecycles(): void {
+  console.time("st")
 
   if (debugMode){
     console.log(
@@ -361,6 +381,7 @@ export function handlePlantLifecycles(): void {
 
     decrementLifespan(entity)
   }
+  console.timeEnd("st")
 }
 
 // NETWORK ABSTRACTIONS
@@ -400,17 +421,18 @@ export function getViewAsBuffer(position: number): Buffer {
       
       // Calculate local index in the tempArray (0-4095)
       const localIndex = localRow * 64 + localCol;
-      
-      const entitiesAtPosition = entitiesByPosition[globalPos];
-      if (entitiesAtPosition?.size) {
-        for (let entity of entitiesAtPosition) {
-          const lifespan = lifespans[entity];
-          if (typeof lifespan === "number") {
-            // Use localIndex instead of globalPos here!
-            tempArray[localIndex] = splitUp64(lifespan) as 0 | 1 | 2 | 3;
-            break; // Only use the first entity's lifespan
-          }
-        }
+
+      const animalAtPosition = animalsByPosition[globalPos]
+      const plantAtPosition = plantsByPosition[globalPos]
+
+      if (animalAtPosition){
+        const energy = energies[animalAtPosition]
+        tempArray[localIndex] = splitUp64(energy)
+      }
+
+      if (plantAtPosition){
+        const lifespan = lifespans[plantAtPosition];
+        tempArray[localIndex] = splitUp64(lifespan)
       }
     }
   }
@@ -428,10 +450,6 @@ export function getViewAsBuffer(position: number): Buffer {
   
   return buffer;
 }
-
-
-
-///
 
 // function printBytesInBinary(buff: Buffer){
 //   const binaryStrings = Array.from(buff)
