@@ -9,8 +9,8 @@ However, if this DOESN'T end up working out, I want the changes here to be isola
 
 So that means my plan of attack will be:
 
-A - separate the positions in ECS state
-B - Create a write-heavy read-lite binary representation of state
+A - separate the positions in ECS state ✅
+B - Create a write-heavy read-light binary representation of state ✏️
 C - Return back to sockets, where I can continue the re-architecture where an initial view is sent, and after that, only updates.
 
 D - Mineral grid?
