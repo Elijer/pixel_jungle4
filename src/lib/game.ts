@@ -2,7 +2,9 @@ import { LIFIQueue } from './utilities.js';
 import { log, warn } from './logger.js';
 import { debug } from 'console';
 
-let debugMode = true
+let maxLifecycleTime = 0
+
+let debugMode = false
 let entityCounter = 0
 let maxEntityNumberReached = 1
 
@@ -347,6 +349,7 @@ function plantReproduce(entity: Entity): void {
 }
 
 export function handlePlantLifecycles(): void {
+  const start = new Date().getTime()
   console.time("st")
 
   if (debugMode){
@@ -382,6 +385,8 @@ export function handlePlantLifecycles(): void {
     decrementLifespan(entity)
   }
   console.timeEnd("st")
+  maxLifecycleTime = Math.max(maxLifecycleTime, new Date().getTime()-start)
+  console.log(`max ms for lifecycle is ${maxLifecycleTime} for ${entities.size} entities`)
 }
 
 // NETWORK ABSTRACTIONS

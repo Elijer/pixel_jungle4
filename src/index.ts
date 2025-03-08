@@ -15,7 +15,7 @@ setInterval(()=>{
   const buff = getViewAsBuffer(1)
   io.emit("view", new Uint8Array(buff)); // 4096 value is an example of a player who is actually in the first view, since it's the first position of the second row of the master grid
   // Around here, I have to actually send some data
-}, 100)
+}, 1)
 
 httpServer.listen(port, () => {
   log(`-->>> STARTED SERVER: ${port} <<<--`)
