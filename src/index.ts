@@ -3,29 +3,14 @@ import { log } from './lib/logger.js';
 import { handlePlantLifecycles, createPlant, getViewAsBuffer, entities } from './lib/game.js';
 const { io, port, httpServer } = setupServer();
 
-let maxLifecycleTime = 0
-let lifeCycleAverage = 0
-let avgCount = 0
-
 createPlant(0, 1) // at midpoint
 createPlant(0, 320) // at midpoint
 createPlant(0, 8200) // at midpoint
 
 setInterval(()=>{
-  const start = new Date().getTime()
   handlePlantLifecycles()
-  // sending a pre-ordained section of the map - section 1
-  // but later on this will be triggered
-  // by changing views only
   const buff = getViewAsBuffer(1)
-  io.emit("view", new Uint8Array(buff)); // 4096 value is an example of a player who is actually in the first view, since it's the first position of the second row of the master grid
-  // Around here, I have to actually send some data
-
-  const elapsed = new Date().getTime()-start
-  avgCount++
-  lifeCycleAverage = (lifeCycleAverage * avgCount + elapsed) / (avgCount+1)
-  maxLifecycleTime = Math.max(maxLifecycleTime, elapsed)
-  console.log(`max ms are ${maxLifecycleTime}, avg is ${lifeCycleAverage} for ${entities.size} entities`)
+  io.emit("view", new Uint8Array(buff));
 }, 1)
 
 httpServer.listen(port, () => {

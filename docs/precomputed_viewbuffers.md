@@ -4,6 +4,24 @@ and to fill up the entire grid.
 
 Okay! I was wrong! We were at 48 for a while and then ended up on 61. It was the console logs! I came to a hasty conclusion. I want to look at the average.
 
+For A: max ms are 59, avg is 5.456145629607315 for 65203 entities after 19940
+for B: max ms: 110, avg: 5.638068096595188 for 65263 entities after 20000
+
+I wouldn't pay too much attention to the max, the avg is pretty comparable. I wouldn't say there's a huge difference I can tell, and in fact the less complicated version seems to perform a bit better.
+
+Kit for index.js:
+```ts
+  let maxLifecycleTime = 0
+  let lifeCycleAverage = 0
+  let avgCount = 0
+  
+  const elapsed = new Date().getTime()-start
+  avgCount++
+  lifeCycleAverage = (lifeCycleAverage * avgCount + elapsed) / (avgCount+1)
+  maxLifecycleTime = Math.max(maxLifecycleTime, elapsed)
+  console.log(`max ms are ${maxLifecycleTime}, avg is ${lifeCycleAverage} for ${entities.size} entities after ${avgCount}`)
+```
+
 # Initial attempt at precomputing view buffers failed
 
 Which sort of makes sense. It's more complicated, and many more operations, so there are lots of ways it can be slower. I ask deepseek about it and got this:

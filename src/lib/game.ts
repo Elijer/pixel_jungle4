@@ -1,8 +1,5 @@
 import { LIFIQueue } from './utilities.js';
 import { log, warn } from './logger.js';
-import { debug } from 'console';
-
-let maxLifecycleTime = 0
 
 let debugMode = false
 let entityCounter = 0
