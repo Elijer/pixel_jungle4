@@ -4,6 +4,8 @@ import { handlePlantLifecycles, createPlant, getViewAsBuffer, entities } from '.
 const { io, port, httpServer } = setupServer();
 
 let maxLifecycleTime = 0
+let lifeCycleAverage = 0
+let avgCount = 0
 
 createPlant(0, 1) // at midpoint
 createPlant(0, 320) // at midpoint
@@ -19,8 +21,11 @@ setInterval(()=>{
   io.emit("view", new Uint8Array(buff)); // 4096 value is an example of a player who is actually in the first view, since it's the first position of the second row of the master grid
   // Around here, I have to actually send some data
 
-  maxLifecycleTime = Math.max(maxLifecycleTime, new Date().getTime()-start)
-  console.log(`max ms for lifecycle is ${maxLifecycleTime} for ${entities.size} entities`)
+  const elapsed = new Date().getTime()-start
+  avgCount++
+  lifeCycleAverage = (lifeCycleAverage * avgCount + elapsed) / (avgCount+1)
+  maxLifecycleTime = Math.max(maxLifecycleTime, elapsed)
+  console.log(`max ms are ${maxLifecycleTime}, avg is ${lifeCycleAverage} for ${entities.size} entities`)
 }, 1)
 
 httpServer.listen(port, () => {

@@ -2,6 +2,8 @@
 Getting max of 67 for time it takes to run an interval every ms
 and to fill up the entire grid.
 
+Okay! I was wrong! We were at 48 for a while and then ended up on 61. It was the console logs! I came to a hasty conclusion. I want to look at the average.
+
 # Initial attempt at precomputing view buffers failed
 
 Which sort of makes sense. It's more complicated, and many more operations, so there are lots of ways it can be slower. I ask deepseek about it and got this:
