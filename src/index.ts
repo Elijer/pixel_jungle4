@@ -1,13 +1,16 @@
 import setupServer from './lib/setupServer.js';
 import { log } from './lib/logger.js';
-import { handlePlantLifecycles, createPlant, getViewAsBuffer } from './lib/game.js';
+import { handlePlantLifecycles, createPlant, getViewAsBuffer, entities } from './lib/game.js';
 const { io, port, httpServer } = setupServer();
+
+let maxLifecycleTime = 0
 
 createPlant(0, 1) // at midpoint
 createPlant(0, 320) // at midpoint
 createPlant(0, 8200) // at midpoint
 
 setInterval(()=>{
+  const start = new Date().getTime()
   handlePlantLifecycles()
   // sending a pre-ordained section of the map - section 1
   // but later on this will be triggered
@@ -15,6 +18,9 @@ setInterval(()=>{
   const buff = getViewAsBuffer(1)
   io.emit("view", new Uint8Array(buff)); // 4096 value is an example of a player who is actually in the first view, since it's the first position of the second row of the master grid
   // Around here, I have to actually send some data
+
+  maxLifecycleTime = Math.max(maxLifecycleTime, new Date().getTime()-start)
+  console.log(`max ms for lifecycle is ${maxLifecycleTime} for ${entities.size} entities`)
 }, 1)
 
 httpServer.listen(port, () => {

@@ -57,7 +57,7 @@ const compass = [
 let entityCount: Entity = 0 // 0 is avoided since entity counter begins by adding 1 - this is good, since 0 can be fraught
 let recycledEntities: number[] = []
 
-const entities: Set<Entity> = new Set()
+export const entities: Set<Entity> = new Set()
 
 function recycleEntity(entity: Entity){
   // if (recycledEntities.length > map.positions / 2) recycledEntities = [] // I don't think I should every need this
@@ -349,8 +349,7 @@ function plantReproduce(entity: Entity): void {
 }
 
 export function handlePlantLifecycles(): void {
-  const start = new Date().getTime()
-  console.time("st")
+  // console.time("st")
 
   if (debugMode){
     console.log(
@@ -384,9 +383,7 @@ export function handlePlantLifecycles(): void {
 
     decrementLifespan(entity)
   }
-  console.timeEnd("st")
-  maxLifecycleTime = Math.max(maxLifecycleTime, new Date().getTime()-start)
-  console.log(`max ms for lifecycle is ${maxLifecycleTime} for ${entities.size} entities`)
+  // console.timeEnd("st")
 }
 
 // NETWORK ABSTRACTIONS
