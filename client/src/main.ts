@@ -17,21 +17,14 @@ const colors = ["black", "yellow", "orange", "red"]
 
 socket.on("connect", ()=> {
 
+  // NOTE: By wrapping everything in an additional nest of "initial data", I can pass presets from server to client
+  // like the map size, if that's ever needed
+  // socket.off("initialData")
+  // socket.on("initialData", (initialData)=>{
+
   const listenerController = new AbortController();
   const { signal } = listenerController; // add this to key bindings to efficiently clean them up
 
-  socket.off("initialData")
-  socket.on("initialData", (initialData)=>{
-
-    // By wrapping everything in initial data, we can ensure that the server gets the first word
-    // this helps for things like deferring to the server for map size
-    // or for entity ID
-    // which we want - for now at least, the client gets no say in player ID
-    // and players can't persist over multiple sessions
-    // they die on disconnect, to keep things simple for now
-
-    // This is called on initial connection
-    // AND whenever the player changes view
     socket.on("view", (buff) => {
       const squareSize = offscreenCanvas.width / 64;
       const dv = new DataView(buff);
@@ -54,6 +47,10 @@ socket.on("connect", ()=> {
       }
     });
 
+    socket.on("update", (data)=>{
+      console.log(data)
+    })
+
     // And THIS is called whenever anything in the map moves
     // OR if the player moves
     // (starting out we won't do any optimistic updates for movement / player actions, 
@@ -62,11 +59,11 @@ socket.on("connect", ()=> {
     // to do optimistic updates,
     // but again, not my first priority
     // )
-    socket.on("upate", (buff) => {
+    // socket.on("upate", (buff) => {
       
-    })
+    // })
 
-  })
+  // })
 
   socket.on("disconnect", ()=>{
     listenerController.abort();
