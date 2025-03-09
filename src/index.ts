@@ -41,9 +41,9 @@ io.on("connection", (socket) => {
 
 })
 
-game.createPlant(0, 1) // at midpoint
-game.createPlant(0, 320) // at midpoint
-game.createPlant(0, 8200) // at midpoint
+game.createPlant(1, 1) // at midpoint
+game.createPlant(1, 320) // at midpoint
+game.createPlant(1, 8200) // at midpoint
 
 setInterval(()=>{
   game.handlePlantLifecycles()

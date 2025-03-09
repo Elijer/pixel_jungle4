@@ -47,8 +47,28 @@ socket.on("connect", ()=> {
       }
     });
 
-    socket.on("update", (data)=>{
-      console.log(data)
+    // Assume we receive a 2-byte ArrayBuffer from WebSocket
+    function extractUpdate(buffer: ArrayBuffer) {
+      const view = new DataView(buffer);
+      const packedValue = view.getUint16(0, false); // Read 16-bit integer (big-endian)
+
+      const num12bit = (packedValue >> 2) & 0xFFF; // Extract 12-bit value
+      const num2bit = packedValue & 0x3; // Extract 2-bit value
+      console.log(num2bit)
+
+      return { num12bit, num2bit };
+    }
+
+    socket.on("u", (buff)=>{
+
+      const squareSize = offscreenCanvas.width / 64;
+      const { num12bit: tile, num2bit: pigment } = extractUpdate(buff);
+      console.log(colors[pigment])
+      const row = Math.floor(tile/64)
+      const col = tile % 64
+      
+      offscreenCtx!.fillStyle = colors[pigment]
+      offscreenCtx!.fillRect(col * squareSize, row * squareSize, squareSize, squareSize);
     })
 
     // And THIS is called whenever anything in the map moves

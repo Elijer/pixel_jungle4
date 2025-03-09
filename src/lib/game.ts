@@ -10,7 +10,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   type Entity = number
   type Energy = number
-  type Level = 0 | 1 | 2
+  type Level = 1 | 2 | 3
   type Lifespan = number
   type Position = number
 
@@ -123,6 +123,10 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   function removeEntityEntirely(entity: Entity){
     try {
+
+      const position = plantPositions[entity] || animalPositions[entity]
+      sendUpdate(position!, 0)
+        
 
       // simple traits
       energies[entity]  = undefined
@@ -252,8 +256,6 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   function getViewFromPosition(position: Position): number {
     // This could also be cached, but would it even be faster?
-    // The computation of these two values is combined because so far they are always fetched together
-    // and they re-use a bunch of numbers
 
     // Global x, y (0-255, 0-255)
     const y = Math.floor(position / map.totalCols)
@@ -263,13 +265,26 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     const viewRow = Math.floor(y / map.rows)
     const viewCol = Math.floor(x / map.cols)
 
-    // by subtracting the vaue of the first row or col in view, we get local x y
-    // (0-63, 0-63)
-    // we can also get the local x and y
-    // const localY = y - (viewRow * map.rows);
-    // const localX = x - (viewCol * map.cols);
-
     return viewRow * map.viewCols + viewCol
+  }
+
+  function getViewAndLocalPositionFromPosition(position: Position): {view: number, localPosition: number} {
+
+    // Global x, y (0-255, 0-255)
+    const y = Math.floor(position / map.totalCols)
+    const x = position % map.totalCols
+
+    const viewRow = Math.floor(y / map.rows)
+    const viewCol = Math.floor(x / map.cols)
+
+    const localY = y - (viewRow * map.rows);
+    const localX = x - (viewCol * map.cols);
+
+    // Computation combined because they re-use a bunch of numbers
+    return {
+      view: viewRow * map.viewCols + viewCol,
+      localPosition: localY * map.cols + localX
+    }
   }
 
   function createPlayer(socketId: string): {player: Entity, position: Position} {
@@ -325,18 +340,25 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       // later birthtime first so we can pop off the smaller one from the end
       childBirthtimes.sort((a, b)=>b-a)
       // Random lifespans determined here
+
+      // Get representation of tile, pack it into a buffer, send it over to the right room for the v
       births[entity] = childBirthtimes
 
-      const view = getViewFromPosition(position)
-      socketIo.to(`v:${view}`).emit('update', {
-        msg: `hi from plant ${entity}`
-      })
+      sendUpdate(position, level)
 
     } catch (e){
       const msg = `Failed to createPlant @ ${position}: ${e}`
       warn(msg)
       throw new Error(msg)
     }
+  }
+
+  function sendUpdate(position: Position, val: 0 | 1 | 2 | 3){
+    const { view, localPosition } = getViewAndLocalPositionFromPosition(position)
+    const packedValue = (localPosition << 2) | val
+    const buffer = Buffer.alloc(2); // 12 for location, 2 for pigment
+    buffer.writeUInt16BE(packedValue, 0)
+    socketIo.to(`v:${view}`).emit('u', buffer)
   }
 
   function decrementLifespan(entity: Entity): void {
@@ -491,7 +513,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
         if (plantAtPosition){
           const lifespan = lifespans[plantAtPosition];
-          tempArray[localIndex] = splitUp64(lifespan)
+          tempArray[localIndex] = levels[plantAtPosition]!
         }
       }
     }

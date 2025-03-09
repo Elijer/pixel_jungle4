@@ -16,6 +16,8 @@ C - Return back to sockets, where I can continue the re-architecture where an in
 D - Mineral grid?
 E - different plant levels?
 
+F - Batch updates as much as possible
+
 After that, we have player interaction, computing views when players change screens, minerals grids, and all sorts of other fun stuff.
 
 # Guiding Principles
