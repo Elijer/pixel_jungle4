@@ -15,6 +15,11 @@ const offscreenCtx = offscreenCanvas.getContext("2d");
 
 const colors = ["black", "yellow", "orange", "red"]
 
+// TODO: the server should be passing this kind of thing - there's a note below about this
+const gameconfig = {
+  inputCooldownTime: 60 
+}
+
 socket.on("connect", ()=> {
 
   // NOTE: By wrapping everything in an additional nest of "initial data", I can pass presets from server to client
@@ -54,7 +59,6 @@ socket.on("connect", ()=> {
 
       const num12bit = (packedValue >> 2) & 0xFFF; // Extract 12-bit value
       const num2bit = packedValue & 0x3; // Extract 2-bit value
-      console.log(num2bit)
 
       return { num12bit, num2bit };
     }
@@ -63,7 +67,6 @@ socket.on("connect", ()=> {
 
       const squareSize = offscreenCanvas.width / 64;
       const { num12bit: tile, num2bit: pigment } = extractUpdate(buff);
-      console.log(colors[pigment])
       const row = Math.floor(tile/64)
       const col = tile % 64
       
@@ -71,26 +74,42 @@ socket.on("connect", ()=> {
       offscreenCtx!.fillRect(col * squareSize, row * squareSize, squareSize, squareSize);
     })
 
-    // And THIS is called whenever anything in the map moves
-    // OR if the player moves
-    // (starting out we won't do any optimistic updates for movement / player actions, 
-    // cause honestly we don't have to - updates are very fast
-    // Although...they will have some latency. So, it would improve the experience quite a bit
-    // to do optimistic updates,
-    // but again, not my first priority
-    // )
-    // socket.on("upate", (buff) => {
-      
-    // })
-
-  // })
-
   socket.on("disconnect", ()=>{
     listenerController.abort();
     // document.removeEventListener("keydown", controlsListener)
   })
 
+  // Add an event listener that creates input events to send the backend, but can be cancelled by aborting the signal
+  document.addEventListener('keydown', controlsListener, { signal } )
+
 })
+
+const keyCommandBindings: { [key: string]: number } = {
+  w: 0,
+  s: 1,
+  a: 2,
+  d: 3,
+  o: 4
+}
+
+const controlsListener = throttle((event: KeyboardEvent) => {
+  const commandCode = keyCommandBindings[event.key.toLowerCase()];
+  console.log(commandCode)
+  if (commandCode !== undefined) {
+    socket.emit("input", new Uint8Array([commandCode]));
+  }
+}, gameconfig.inputCooldownTime);
+
+function throttle<T extends (...args: any[]) => void>(func: T, limit: number): T {
+  let inThrottle: boolean;
+  return function(this: ThisParameterType<T>, ...args: Parameters<T>) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  } as T;
+}
 
 
 // resizes both canvases dynamically

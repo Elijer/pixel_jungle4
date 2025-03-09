@@ -18,6 +18,8 @@ E - different plant levels?
 
 F - Batch updates as much as possible
 
+Z - Optimistic frontend updates
+
 After that, we have player interaction, computing views when players change screens, minerals grids, and all sorts of other fun stuff.
 
 # Guiding Principles

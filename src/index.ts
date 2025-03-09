@@ -34,6 +34,20 @@ io.on("connection", (socket) => {
   // Join room for updates on current view
   socket.join(`v:${view}`)
 
+  // const keyCommandBindings: { [key: string]: number } = {
+  //   w: 0: up,
+  //   s: 1: down,
+  //   a: 2: left,
+  //   d: 3: right,
+  //   o: 4: eat
+  // }
+  
+  socket.on('input', ([commandCode])=>{
+    // if (commandCode === 4) // this is about eating
+    // otherwise:
+    // TODO: attempt to move the player, i.e. game.movePlayer
+  })
+
   socket.on("disconnecting", async(reason) => {
     log(`player ${player} disconnected due to ${reason}`)
     game.destroyPlayerMuahaha(player)

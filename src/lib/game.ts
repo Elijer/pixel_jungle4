@@ -428,6 +428,28 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     createPlant(level, randomSeedPosition)
   }
 
+  const commandKey = [-map.totalCols, map.totalCols, -1, 1]
+
+  function movePlayer(player: Entity, command: number): boolean {
+    const playerPosition = animalPositions[player]
+    if (typeof playerPosition !== 'number') return false
+    const newPosition = playerPosition + commandKey[command]
+    if (newPosition > map.positions || newPosition < 0) return false
+    // would probably worth make a sort of comparison map where I can compare any one entity against another entity
+    // to see who would "win" at things, mostly just movement I think
+    if (newPosition)
+    // check if new position has a plant or another player in it
+    // check if the player has enough energy to move
+    // ALSO check to see if there is another player in the new position - this is an attack attempt
+    // You don't need to do this all at once though - you can just handle movement to start with
+    // if we move, get the plant value of the old tile and make sure to replace it in player's absence
+    animalPositions[player] = newPosition
+    sendUpdate(playerPosition, 0)
+    sendUpdate(playerPosition, 1)
+    // remember to return true if we are successful
+    return true
+  }
+
   function handlePlantLifecycles(): void {
     // console.time("st")
 
