@@ -43,9 +43,8 @@ io.on("connection", (socket) => {
   // }
   
   socket.on('input', ([commandCode])=>{
-    // if (commandCode === 4) // this is about eating
-    // otherwise:
-    // TODO: attempt to move the player, i.e. game.movePlayer
+    // if (commandCode === 4) // this is about eating. Otherwise:
+    game.movePlayer(player, commandCode)
   })
 
   socket.on("disconnecting", async(reason) => {

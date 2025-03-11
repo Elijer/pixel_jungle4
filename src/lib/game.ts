@@ -5,7 +5,7 @@ import type { Server, DefaultEventsMap } from 'socket.io'
 function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>) {
 
   let debugMode = false
-  let entityCounter = 0
+  // let entityCounterDebug = 0
   let maxEntityNumberReached = 1
 
   type Entity = number
@@ -54,7 +54,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     map.tr + 1
   ]
 
-  let entityCount: Entity = 0 // 0 is avoided since entity counter begins by adding 1 - this is good, since 0 can be fraught
+  let entityCount: Entity = 1 // 0 is avoided since entity counter begins by adding 1 - this is good, since 0 can be fraught
   let recycledEntities: number[] = []
 
   const entities: Set<Entity> = new Set()
@@ -98,7 +98,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     try {
       if (recycledEntities.length > 0) return recycledEntities.pop()!
       entityCount++
-      entityCounter++
+      // entityCounterDebug++
       if (debugMode){
         maxEntityNumberReached = Math.max(entityCount, maxEntityNumberReached)
       }
@@ -145,7 +145,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       // console.log(`removed ${entity} entirely`)
       // log(`removed ${entity} entirely`)
 
-      entityCounter--
+      // entityCounterDebug-- // debugging only
 
     } catch (e){
       const msg = `problem removing entity ${entity} entirely: ${e}`
@@ -386,6 +386,10 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     return potentialNeighbors
   }
 
+  // So at the MOMENT, since createPlant relies on this
+  // plants just can't reproduce on top of a tile with ANYTHING in it
+  // Which keeps things pretty simple
+  // but also...means that players can't things yet
   function inhabitantsAtPosition(position: Position): boolean {
     for (let positions of [plantsByPosition, animalsByPosition]){
       if (positions[position]) return true
@@ -435,18 +439,27 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     if (typeof playerPosition !== 'number') return false
     const newPosition = playerPosition + commandKey[command]
     if (newPosition > map.positions || newPosition < 0) return false
-    // would probably worth make a sort of comparison map where I can compare any one entity against another entity
-    // to see who would "win" at things, mostly just movement I think
-    if (newPosition)
-    // check if new position has a plant or another player in it
-    // check if the player has enough energy to move
-    // ALSO check to see if there is another player in the new position - this is an attack attempt
-    // You don't need to do this all at once though - you can just handle movement to start with
-    // if we move, get the plant value of the old tile and make sure to replace it in player's absence
+    
+    // In the future, I should make a complex ruling function that checks things like
+    // is the current player a predator, is the target a plant, etc.
+    // for now, just prevent a player from moving to any tile where there is something already there
+    if (inhabitantsAtPosition(newPosition)) return false
+
+    // otherwise, we're good! Just move!
+      // change the state
     animalPositions[player] = newPosition
-    sendUpdate(playerPosition, 0)
-    sendUpdate(playerPosition, 1)
-    // remember to return true if we are successful
+    animalsByPosition[playerPosition] = undefined
+    animalsByPosition[newPosition] = player
+
+    // update representation
+      // this one is easy
+    sendUpdate(newPosition, 1)
+
+    // this one is a little trickier
+    const plant = plantsByPosition[playerPosition]
+    const plantLevel = plant ? levels[plant] || 0 : 0
+    sendUpdate(playerPosition, plantLevel)
+
     return true
   }
 
@@ -566,7 +579,8 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     createPlayer,
     destroyPlayerMuahaha,
     getViewAsBuffer,
-    handlePlantLifecycles
+    handlePlantLifecycles,
+    movePlayer
   }
 }
 

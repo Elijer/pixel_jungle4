@@ -13,6 +13,7 @@ A - separate the positions in ECS state ✅
 B - Create a write-heavy read-light binary representation of state ✏️
 C - Return back to sockets, where I can continue the re-architecture where an initial view is sent, and after that, only updates.
 
+C2 - Views should change as player moves
 D - Mineral grid?
 E - different plant levels?
 
