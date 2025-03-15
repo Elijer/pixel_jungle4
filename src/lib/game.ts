@@ -2,6 +2,7 @@ import { LIFIQueue } from './utilities.js';
 import { log, warn } from './logger.js';
 import type  { Socket } from 'socket.io'
 import type { Server, DefaultEventsMap } from 'socket.io'
+import { simplexPositive } from './simplex.js';
 
 function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>) {
 
@@ -13,6 +14,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
   type Energy = number
   type Level = 1 | 2 | 3
   type Lifespan = number
+  type Mineral = 0 | 1 | 2 | 3
   type Position = number
 
   const lifespanArchetypes = [
@@ -36,9 +38,10 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     const views = viewRows * viewCols
     const tr = viewRows * rows
     const totalCols = viewCols * cols
+    const totalRows = viewRows * cols
     const ppv = rows * cols // positions per view
     const positions = ppv * views
-    return {rows, cols, viewRows, viewCols, views, totalCols, tr, ppv, positions}
+    return {rows, cols, viewRows, viewCols, views, totalCols, totalRows, tr, ppv, positions}
   }
 
   const map = getMapConfig()
@@ -86,9 +89,20 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
   const plantsByPosition: (Entity | undefined)[] = Array.from({length: map.positions})
   const entitiesBySocket: Map<string, Entity> = new Map() // and this is so that I can get an entity from a socket, which I may not need because it should be in the scope
 
+  const minerals: Mineral[] = Array.from({length: map.positions})
+
+  for (let y = 0; y < map.totalRows; y++){
+    for (let x = 0; x < map.totalCols; x++){
+      let noise = Math.floor(+simplexPositive(x, y, 60, 12) * 4) as Mineral
+      let tileNumber = y * map.totalCols + x
+      minerals[tileNumber] = noise
+    }
+  }
+
   // This is where all player connections get stored
   // and whenever a tile changes, all all players in that tile's view will be notified
   const viewRooms: Map<number, Set<string>> = new Map()
+
   for (let i = 0; i < 16; i++){
     viewRooms.set(i, new Set())
   }
@@ -334,8 +348,9 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
         // Get a random timestamp within organism's lifespan
         // TODO: add minerals to influence this
         // The idea here is that I want variation in lifespans, but I don't want plants
-        // having a chance to reproduce milliseconds after being born, that's weird
-        childBirthtimes.push(Math.floor((lifespan/3) + Math.random() * lifespan / 3))
+        // having a chance to reproduce milliseconds after being born, that's causes flashgrowth problems
+        let birthTime = Math.floor((lifespan/3) + Math.random() * lifespan / 3) + minerals[position] * 5
+        childBirthtimes.push(birthTime)
       }
 
       // later birthtime first so we can pop off the smaller one from the end
