@@ -1,5 +1,6 @@
 import { LIFIQueue } from './utilities.js';
 import { log, warn } from './logger.js';
+import type  { Socket } from 'socket.io'
 import type { Server, DefaultEventsMap } from 'socket.io'
 
 function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>) {
@@ -60,7 +61,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
   const entities: Set<Entity> = new Set()
 
   function recycleEntity(entity: Entity){
-    // if (recycledEntities.length > map.positions / 2) recycledEntities = [] // I don't think I should every need this
+    // if (recycledEntities.length > map.positions / 2) recycledEntities = [] // I don't think I should ever need this
     recycledEntities.push(entity)
   }
 
@@ -434,7 +435,11 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   const commandKey = [-map.totalCols, map.totalCols, -1, 1]
 
-  function movePlayer(player: Entity, command: number): boolean {
+  function movePlayer(
+    socket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>,
+    player: Entity,
+    command: number): boolean
+  {
     const playerPosition = animalPositions[player]
     if (typeof playerPosition !== 'number') return false
     const newPosition = playerPosition + commandKey[command]
@@ -451,14 +456,22 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     animalsByPosition[playerPosition] = undefined
     animalsByPosition[newPosition] = player
 
-    // update representation
-      // this one is easy
-    sendUpdate(newPosition, 1)
-
-    // this one is a little trickier
-    const plant = plantsByPosition[playerPosition]
-    const plantLevel = plant ? levels[plant] || 0 : 0
-    sendUpdate(playerPosition, plantLevel)
+    const oldView = getViewFromPosition(playerPosition)
+    const newView = getViewFromPosition(newPosition)
+    console.log({oldView, newView})
+    // this check could be optimized to not do such accurate checks every move
+    if (oldView !== newView){
+      socket.leave(`v:${oldView}`)
+      socket.join(`v:${newView}`)
+      socket.emit("view", getViewAsBuffer(newPosition))
+    } else {
+      // Send updated representation of new position player inhabits now
+      sendUpdate(newPosition, 1)
+      // Send updated representation of the position they left behind
+      const plant = plantsByPosition[playerPosition]
+      const plantLevel = plant ? levels[plant] || 0 : 0
+      sendUpdate(playerPosition, plantLevel)
+    }
 
     return true
   }
@@ -580,6 +593,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     destroyPlayerMuahaha,
     getViewAsBuffer,
     handlePlantLifecycles,
+    getRandomPositionValue,
     movePlayer
   }
 }

@@ -44,7 +44,7 @@ io.on("connection", (socket) => {
   
   socket.on('input', ([commandCode])=>{
     // if (commandCode === 4) // this is about eating. Otherwise:
-    game.movePlayer(player, commandCode)
+    game.movePlayer(socket, player, commandCode)
   })
 
   socket.on("disconnecting", async(reason) => {
@@ -54,9 +54,9 @@ io.on("connection", (socket) => {
 
 })
 
-game.createPlant(1, 1) // at midpoint
-game.createPlant(1, 320) // at midpoint
-game.createPlant(1, 8200) // at midpoint
+for (let i = 0; i < 40; i++){
+  game.createPlant(1, game.getRandomPositionValue()) // at midpoint
+}
 
 setInterval(()=>{
   game.handlePlantLifecycles()
