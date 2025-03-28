@@ -10,15 +10,17 @@ However, if this DOESN'T end up working out, I want the changes here to be isola
 So that means my plan of attack will be:
 
 A - separate the positions in ECS state ✅
-B - Create a write-heavy read-light binary representation of state ✏️
-C - Return back to sockets, where I can continue the re-architecture where an initial view is sent, and after that, only updates.
+B - Create a write-heavy read-light binary representation of state ✅
+C - Return back to sockets, where I can continue the re-architecture where an initial view is sent, and after that, only updates. ✅
 
-C2 - Views should change as player moves
-D - Mineral grid?
+C2 - Views should change as player moves ✅
+D - Mineral grid? ✅
 E - different plant levels?
+E2 - Player can "eat" and plants disappear
+E3 - actual comprehensive survival health interface, with energy and visualization of energy on frontend
+E4 - Deploy
 
-F - Batch updates as much as possible
-
+X - Batch updates as much as possible
 Z - Optimistic frontend updates
 
 After that, we have player interaction, computing views when players change screens, minerals grids, and all sorts of other fun stuff.

@@ -60,7 +60,7 @@ for (let i = 0; i < 40; i++){
 
 setInterval(()=>{
   game.handlePlantLifecycles()
-}, 100)
+}, 20)
 
 httpServer.listen(port, () => {
   log(`-->>> STARTED SERVER: ${port} <<<--`)

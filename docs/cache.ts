@@ -93,7 +93,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   for (let y = 0; y < map.totalRows; y++){
     for (let x = 0; x < map.totalCols; x++){
-      let noise = Math.floor(+simplexPositive(x, y, 60, 12) * 4) as Mineral
+      let noise = Math.floor(+simplexPositive(x, y, 20, 12) * 4) as Mineral
       let tileNumber = y * map.totalCols + x
       minerals[tileNumber] = noise
     }
@@ -329,7 +329,8 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   // PLANTS
   function createPlant(level: Level, position: Position | undefined = undefined, ): void {
-    // see docs for the difficulties of these patterns
+    // So I think I keep making the same mistake -
+    // I am using lifespan to calculate to many things.
     try {
       
       // prevent possibility of multiple plants in the same place
@@ -343,22 +344,25 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       if (entity === -1) return
       levels[entity] = level
       const normalLifespan = startingLifespanByLevel[level]
-      const actualLifespan = normalLifespan / (minerals[position]+1)
+      // const actualLifespan = normalLifespan / (minerals[position]+1) // ah. This leads to weird behavior because
+      // if I put the birthTimes towards the end, if I also reduce the lifespan, they can happen really fast
+      // again, using lifespan...sort of a problem.
+      const actualLifespan = normalLifespan
       lifespans[entity] = actualLifespan
       
       const childBirthtimes: number[] = []
       for (let i = 0; i < 2; i++){
         // let birthTime = Math.floor((normalLifespan/3) + (Math.random() * normalLifespan / 3))
-        // let birthTime = Math.floor(normalLifespan - Math.random() * normalLifespan/2)
-        
-        // and this is what used to be here:
-        // Get a random timestamp within organism's lifespan
-        // TODO: add minerals to influence this
-        // The idea here is that I want variation in lifespans, but I don't want plants
-        // having a chance to reproduce milliseconds after being born, that's causes flashgrowth problems
-        // let birthTime = Math.floor((lifespan/3) + Math.random() * lifespan / 3) + minerals[position] * 5
-        
-        let birthTime = Math.floor((actualLifespan/3) + Math.random() * actualLifespan / 3) + minerals[position] * 8
+        // let birthTime = Math.floor(normalLifespan - Math.random() * normalLifespan/2 + minerals[position] * normalLifespan/4)
+        // let birthTime = normalLifespan - minerals[position] * normalLifespan * 1.2 * Math.random()
+        const increment = normalLifespan / 4
+        const minimumDelay = increment * 2
+        let birthTime = normalLifespan - minimumDelay - (minerals[position] * increment) - (Math.random()*increment/2)
+        // So I don't totally understand, but I am running into a problem because
+        // there isn't REALLY an option for deadzones
+        console.log(birthTime)
+        // let birthTime = Math.floor((lifespan/3) + Math.random() * lifespan / 3) + minerals
+        // [position] * 8
         childBirthtimes.push(birthTime)
       }
 
