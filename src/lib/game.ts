@@ -7,7 +7,6 @@ import { simplexPositive } from './simplex.js';
 function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>) {
 
   let debugMode = false
-  // let entityCounterDebug = 0
   let maxEntityNumberReached = 1
 
   type Entity = number
@@ -46,12 +45,12 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   const map = getMapConfig()
 
-  const gameConfig: Record<string, unknown> = {
-    mineralScale: 10
+  const gameConfig: Record<string, any> = {
+    mineralScale: 60,
+    mineralInversion: true
   } as const
 
-  // I think technically, at edges of maps when used, this will hop the map in a few cases
-  // but maybe it's fine for now
+  // Currently it's possible to hop from left to right on the map
   const compass = [
     -map.tr - 1,
     -map.tr,
@@ -336,41 +335,33 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     // see docs for the difficulties of these patterns
     try {
       
-      // prevent possibility of multiple plants in the same place
-      if (position && inhabitantsAtPosition(position)) return
+      if (position && steadfastInhabitantsAtPosition(position, level)) return
       if (!position) return
 
-      // let entity = spawnSpatialEntity(position)
       let entity = createSpatialEntity(position, plantPositions, plantsByPosition)
+
+      let childrenNumber = 2
+
+      // If not at the top level, AND we get a random ~1/8 chance, mutate up to higher level but only have one offspring
+      if (level < 3 && Math.random() > .99){
+        level = level + 1
+        childrenNumber = 1
+      }
+
+      // TODO: also a chance to "evolve" down a level
 
       // this can happen if there's no room - the -1 trickles up, and we fail to create a plant
       if (entity === -1) return
       levels[entity] = level
       const normalLifespan = startingLifespanByLevel[level]
-      // const actualLifespan = normalLifespan / (minerals[position]+1)
+
       lifespans[entity] = normalLifespan
       
       const childBirthtimes: number[] = []
-      for (let i = 0; i < 2; i++){
-        // let birthTime = Math.floor((normalLifespan/3) + (Math.random() * normalLifespan / 3))
-        // let birthTime = Math.floor(normalLifespan - Math.random() * normalLifespan/2)
-        
-        // and this is what used to be here:
-        // Get a random timestamp within organism's lifespan
-        // TODO: add minerals to influence this
-        // The idea here is that I want variation in lifespans, but I don't want plants
-        // having a chance to reproduce milliseconds after being born, that's causes flashgrowth problems
-        // let birthTime = Math.floor((lifespan/3) + Math.random() * lifespan / 3) + minerals[position] * 5
-
-
-        // So a birth takes between the full length of a parent and 4/5ths of a parents life
-        // And further reduced by the minerals 
-        // let birthTime = normalLifespan / (minerals[position]) - normalLifespan*.90
-        // let birthTime = normalLifespan / (minerals[position]) - normalLifespan*.98
-        let birthTime = normalLifespan*.99-minerals[position]*14
-        // birthTime = Math.min(birthTime, normalLifespan*.9) // don't let it get shorter than .3
-        // let birthTime = Math.floor((normalLifespan / 5 * Math.random() - normalLifespan/7 / minerals[position]))
-        // let birthTime = Math.floor((actualLifespan/3) + Math.random() * actualLifesssssssssssssspan / 3) + minerals[position] * 8
+      for (let i = 0; i < childrenNumber; i++){
+        // let birthTime = normalLifespan*.99-minerals[position]*14
+        const minVal = gameConfig.mineralInversion ? 3-minerals[position] : minerals[position]
+        let birthTime = normalLifespan*.99-minVal*level*16
         childBirthtimes.push(birthTime)
       }
 
@@ -423,10 +414,6 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     return potentialNeighbors
   }
 
-  // So at the MOMENT, since createPlant relies on this
-  // plants just can't reproduce on top of a tile with ANYTHING in it
-  // Which keeps things pretty simple
-  // but also...means that players can't things yet
   function inhabitantsAtPosition(position: Position): boolean {
     for (let positions of [plantsByPosition, animalsByPosition]){
       if (positions[position]) return true
@@ -434,15 +421,17 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     return false
   }
 
-  // function lifespanAtPosition(position: Position): number {
-  //   const inhabitants = entitiesByPosition[position]
-  //   if (inhabitants){
-  //     for (const inhabitant of inhabitants){
-  //       if (typeof lifespans[inhabitant] === "number") return lifespans[inhabitant]
-  //     }
-  //   }
-  //   return 0
-  // }
+  function steadfastInhabitantsAtPosition(position: Position, relativeLevel: number): boolean {
+    // For now, if there is any animal, just return false - plants can't reproduce on top of animals
+    if (animalPositions[position]) return true
+
+    const plant = plantsByPosition[position]
+    // If there is a plant with a higher or the same level, also return that
+    if (plant && levels[plant] && levels[plant] >= relativeLevel) return true
+    
+    // Otherwise, inhabitants at position are stronger
+    return false
+  }
 
   function plantReproduce(entity: Entity): void {
 
@@ -480,14 +469,11 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     if (typeof playerPosition !== 'number') return false
     const newPosition = playerPosition + commandKey[command]
     if (newPosition > map.positions || newPosition < 0) return false
-    
-    // In the future, I should make a complex ruling function that checks things like
-    // is the current player a predator, is the target a plant, etc.
-    // for now, just prevent a player from moving to any tile where there is something already there
+    if (playerPosition % map.totalCols === 0 && command === 2) return false // going left: prevent from hooking back around to the right (plus up one)
+    if (playerPosition % map.totalCols === map.totalCols-1 && command === 3) return false // going right: prevent from hooking back around the left (plus down one)
     if (inhabitantsAtPosition(newPosition)) return false
 
     // otherwise, we're good! Just move!
-      // change the state
     animalPositions[player] = newPosition
     animalsByPosition[playerPosition] = undefined
     animalsByPosition[newPosition] = player
