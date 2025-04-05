@@ -48,3 +48,66 @@ And in the CrazyWavesB, we might get some similiar numbers, and plenty of outlie
 
 # Bell Curve / Standard Deviation
 I think that it would actually be really interesting to see what standard deviation looks like as a pattern of reproduction here.
+
+
+Archived create plant function with notes:
+```ts
+  // PLANTS
+  function createPlant(level: Level, position: Position | undefined = undefined, ): void {
+    // see docs for the difficulties of these patterns
+    try {
+      
+      // prevent possibility of multiple plants in the same place
+      if (position && inhabitantsAtPosition(position)) return
+      if (!position) return
+
+      // let entity = spawnSpatialEntity(position)
+      let entity = createSpatialEntity(position, plantPositions, plantsByPosition)
+
+      // this can happen if there's no room - the -1 trickles up, and we fail to create a plant
+      if (entity === -1) return
+      levels[entity] = level
+      const normalLifespan = startingLifespanByLevel[level]
+      // const actualLifespan = normalLifespan / (minerals[position]+1)
+      lifespans[entity] = normalLifespan
+      
+      const childBirthtimes: number[] = []
+      for (let i = 0; i < 2; i++){
+        // let birthTime = Math.floor((normalLifespan/3) + (Math.random() * normalLifespan / 3))
+        // let birthTime = Math.floor(normalLifespan - Math.random() * normalLifespan/2)
+        
+        // and this is what used to be here:
+        // Get a random timestamp within organism's lifespan
+        // TODO: add minerals to influence this
+        // The idea here is that I want variation in lifespans, but I don't want plants
+        // having a chance to reproduce milliseconds after being born, that's causes flashgrowth problems
+        // let birthTime = Math.floor((lifespan/3) + Math.random() * lifespan / 3) + minerals[position] * 5
+
+
+        // So a birth takes between the full length of a parent and 4/5ths of a parents life
+        // And further reduced by the minerals 
+        // let birthTime = normalLifespan / (minerals[position]) - normalLifespan*.90
+        // let birthTime = normalLifespan / (minerals[position]) - normalLifespan*.98
+        let birthTime = normalLifespan*.99-minerals[position]*14
+        // birthTime = Math.min(birthTime, normalLifespan*.9) // don't let it get shorter than .3
+        // let birthTime = Math.floor((normalLifespan / 5 * Math.random() - normalLifespan/7 / minerals[position]))
+        // let birthTime = Math.floor((actualLifespan/3) + Math.random() * actualLifesssssssssssssspan / 3) + minerals[position] * 8
+        childBirthtimes.push(birthTime)
+      }
+
+      // later birthtime first so we can pop off the smaller one from the end
+      childBirthtimes.sort((a, b)=>b-a)
+      // Random lifespans determined here
+
+      // Get representation of tile, pack it into a buffer, send it over to the right room for the v
+      births[entity] = childBirthtimes
+
+      sendUpdate(position, level)
+
+    } catch (e){
+      const msg = `Failed to createPlant @ ${position}: ${e}`
+      warn(msg)
+      throw new Error(msg)
+    }
+  }
+```

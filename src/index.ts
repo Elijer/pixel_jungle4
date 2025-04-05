@@ -54,13 +54,13 @@ io.on("connection", (socket) => {
 
 })
 
-for (let i = 0; i < 40; i++){
+for (let i = 0; i < 100; i++){
   game.createPlant(1, game.getRandomPositionValue()) // at midpoint
 }
 
 setInterval(()=>{
   game.handlePlantLifecycles()
-}, 20)
+}, 8000)
 
 httpServer.listen(port, () => {
   log(`-->>> STARTED SERVER: ${port} <<<--`)

@@ -46,6 +46,10 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   const map = getMapConfig()
 
+  const gameConfig: Record<string, unknown> = {
+    mineralScale: 10
+  } as const
+
   // I think technically, at edges of maps when used, this will hop the map in a few cases
   // but maybe it's fine for now
   const compass = [
@@ -93,7 +97,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   for (let y = 0; y < map.totalRows; y++){
     for (let x = 0; x < map.totalCols; x++){
-      let noise = Math.floor(+simplexPositive(x, y, 60, 12) * 4) as Mineral
+      let noise = Math.floor(+simplexPositive(x, y, gameConfig.mineralScale, 12) * 4) as Mineral
       let tileNumber = y * map.totalCols + x
       minerals[tileNumber] = noise
     }
@@ -343,8 +347,8 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       if (entity === -1) return
       levels[entity] = level
       const normalLifespan = startingLifespanByLevel[level]
-      const actualLifespan = normalLifespan / (minerals[position]+1)
-      lifespans[entity] = actualLifespan
+      // const actualLifespan = normalLifespan / (minerals[position]+1)
+      lifespans[entity] = normalLifespan
       
       const childBirthtimes: number[] = []
       for (let i = 0; i < 2; i++){
@@ -357,8 +361,16 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
         // The idea here is that I want variation in lifespans, but I don't want plants
         // having a chance to reproduce milliseconds after being born, that's causes flashgrowth problems
         // let birthTime = Math.floor((lifespan/3) + Math.random() * lifespan / 3) + minerals[position] * 5
-        
-        let birthTime = Math.floor((actualLifespan/3) + Math.random() * actualLifespan / 3) + minerals[position] * 8
+
+
+        // So a birth takes between the full length of a parent and 4/5ths of a parents life
+        // And further reduced by the minerals 
+        // let birthTime = normalLifespan / (minerals[position]) - normalLifespan*.90
+        // let birthTime = normalLifespan / (minerals[position]) - normalLifespan*.98
+        let birthTime = normalLifespan*.99-minerals[position]*14
+        // birthTime = Math.min(birthTime, normalLifespan*.9) // don't let it get shorter than .3
+        // let birthTime = Math.floor((normalLifespan / 5 * Math.random() - normalLifespan/7 / minerals[position]))
+        // let birthTime = Math.floor((actualLifespan/3) + Math.random() * actualLifesssssssssssssspan / 3) + minerals[position] * 8
         childBirthtimes.push(birthTime)
       }
 

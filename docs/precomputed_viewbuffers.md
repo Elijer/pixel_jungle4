@@ -42,7 +42,7 @@ Precompute view indices, buffer indices, and bit-shifts for all global positions
 
 Implementation:
 
-typescript
+```typescript
 Copy
 // Precompute during initialization
 type ViewData = {
@@ -118,6 +118,8 @@ function getRepValueAtPosition(position: Position): 0 | 1 | 2 | 3 {
 
   return 0;
 }
+```
+
 Conclusion
 The refactored approach introduces overhead by updating buffers incrementally during entity management. By precomputing view data, batching updates, and ensuring efficient data handling, you can mitigate this overhead. The original code avoided these costs by deferring buffer generation until requested, which is more efficient for the simulation but less responsive for view updates. Choose an approach based on whether simulation speed or real-time view updates are more critical for your game.
 

@@ -12,3 +12,5 @@
 .env.local
 
 app.log
+
+**/.DS_Store

@@ -14,8 +14,9 @@ B - Create a write-heavy read-light binary representation of state ✅
 C - Return back to sockets, where I can continue the re-architecture where an initial view is sent, and after that, only updates. ✅
 
 C2 - Views should change as player moves ✅
-D - Mineral grid? ✅
-E - different plant levels?
+D - Mineral grid? ✅ (added this, interactions could be tweaked)
+D2 - Inverting LifeSpan usage might be a good idea ❓
+E - different plant levels? ✏️
 E2 - Player can "eat" and plants disappear
 E3 - actual comprehensive survival health interface, with energy and visualization of energy on frontend
 E4 - Deploy
