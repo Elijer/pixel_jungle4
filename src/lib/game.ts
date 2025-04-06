@@ -45,10 +45,18 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   const map = getMapConfig()
 
-  const gameConfig: Record<string, any> = {
-    mineralScale: 60,
-    mineralInversion: true
-  } as const
+  const config: Record<string, any> = {
+
+    
+    // Minerals
+    mineralScale: 10,
+    mineralSeed: Math.random() * 1000,
+    mineralInversion: false,
+
+    // organisms
+    evolutionChance: 16, // 4-64 ish
+    plantCycle: 100,
+  }
 
   // Currently it's possible to hop from left to right on the map
   const compass = [
@@ -96,7 +104,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   for (let y = 0; y < map.totalRows; y++){
     for (let x = 0; x < map.totalCols; x++){
-      let noise = Math.floor(+simplexPositive(x, y, gameConfig.mineralScale, 12) * 4) as Mineral
+      let noise = Math.floor(+simplexPositive(x, y, config.mineralScale, config.mineralSeed) * 4) as Mineral
       let tileNumber = y * map.totalCols + x
       minerals[tileNumber] = noise
     }
@@ -309,7 +317,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     // let position = 7712 // the middle for now, but will need to generate this randomly
     let position = getRandomPositionValue()
     let entity = createSpatialEntity(position, animalPositions, animalsByPosition)
-    energies[entity] = 33 // come back to this
+    energies[entity] = 16 // come back to this
     sockets.set(entity, socketId)
     entitiesBySocket.set(socketId, entity)
     // let viewIndex = getViewFromPosition(position)
@@ -343,7 +351,10 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       let childrenNumber = 2
 
       // If not at the top level, AND we get a random ~1/8 chance, mutate up to higher level but only have one offspring
-      if (level < 3 && Math.random() > .99){
+      // if (level < 3 && Math.random() > .99){ // simpler, but less favorable distribution for gameplay
+      const chanceOfMutationScaledToLevel = (1 - Math.pow(config.evolutionChance, -level-1))
+      // The goal here is to make it less likely for 2 to become level 3 than for 1 to become 2
+      if (level < 3 && Math.random() > chanceOfMutationScaledToLevel){
         level = level + 1
         childrenNumber = 1
       }
@@ -360,7 +371,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       const childBirthtimes: number[] = []
       for (let i = 0; i < childrenNumber; i++){
         // let birthTime = normalLifespan*.99-minerals[position]*14
-        const minVal = gameConfig.mineralInversion ? 3-minerals[position] : minerals[position]
+        const minVal = config.mineralInversion ? 3-minerals[position] : minerals[position]
         let birthTime = normalLifespan*.99-minVal*level*16
         childBirthtimes.push(birthTime)
       }
@@ -426,6 +437,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     if (animalPositions[position]) return true
 
     const plant = plantsByPosition[position]
+
     // If there is a plant with a higher or the same level, also return that
     if (plant && levels[plant] && levels[plant] >= relativeLevel) return true
     
@@ -460,7 +472,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   const commandKey = [-map.totalCols, map.totalCols, -1, 1]
 
-  function movePlayer(
+  function playerMove(
     socket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>,
     player: Entity,
     command: number): boolean
@@ -615,7 +627,8 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     getViewAsBuffer,
     handlePlantLifecycles,
     getRandomPositionValue,
-    movePlayer
+    playerMove,
+    config,
   }
 }
 

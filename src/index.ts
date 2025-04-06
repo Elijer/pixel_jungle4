@@ -44,7 +44,7 @@ io.on("connection", (socket) => {
   
   socket.on('input', ([commandCode])=>{
     // if (commandCode === 4) // this is about eating. Otherwise:
-    game.movePlayer(socket, player, commandCode)
+    game.playerMove(socket, player, commandCode)
   })
 
   socket.on("disconnecting", async(reason) => {
@@ -60,7 +60,7 @@ for (let i = 0; i < 100; i++){
 
 setInterval(()=>{
   game.handlePlantLifecycles()
-}, 100)
+}, game.config.plantCycle)
 
 httpServer.listen(port, () => {
   log(`-->>> STARTED SERVER: ${port} <<<--`)

@@ -15,8 +15,10 @@ C - Return back to sockets, where I can continue the re-architecture where an in
 
 C2 - Views should change as player moves ✅
 D - Mineral grid? ✅ (added this, interactions could be tweaked)
-D2 - Inverting LifeSpan usage might be a good idea ❓
-E - different plant levels? ✏️
+D2 - Inverting LifeSpan usage might be a good idea ❓ (as in, its sort of hard to reason about a lifespan approaching 0)
+E - different plant levels? ✅
+E0 - Added random seed for map
+E1 - Showing player icon would be helpful ✏️
 E2 - Player can "eat" and plants disappear
 E3 - actual comprehensive survival health interface, with energy and visualization of energy on frontend
 E4 - Deploy
