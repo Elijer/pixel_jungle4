@@ -120,7 +120,7 @@ const keyCommandBindings: { [key: string]: number } = {
   s: 1,
   a: 2,
   d: 3,
-  o: 4
+  o: 4,
 }
 
 const controlsListener = throttle((event: KeyboardEvent) => {

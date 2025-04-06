@@ -1,7 +1,8 @@
 To Do Sequence
 
 > Player Indicator, movement, eating and energy
-- send a true or false on 'u' (update) to let player know that the update is THEM, thereby updating the marker that shows where their position is
+- send a true or false on 'u' (update) to let player know that the update is THEM,
+  thereby updating the marker that shows where their position is ✅
 - Add additional command allowing players to eat blocks
 - Handle the eat blocks command
 - Increment player energy

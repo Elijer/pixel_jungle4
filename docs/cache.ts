@@ -360,7 +360,6 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
         let birthTime = normalLifespan - minimumDelay - (minerals[position] * increment) - (Math.random()*increment/2)
         // So I don't totally understand, but I am running into a problem because
         // there isn't REALLY an option for deadzones
-        console.log(birthTime)
         // let birthTime = Math.floor((lifespan/3) + Math.random() * lifespan / 3) + minerals
         // [position] * 8
         childBirthtimes.push(birthTime)

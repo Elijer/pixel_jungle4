@@ -43,8 +43,11 @@ io.on("connection", (socket) => {
   // }
   
   socket.on('input', ([commandCode])=>{
-    // if (commandCode === 4) // this is about eating. Otherwise:
-    game.playerMove(socket, player, commandCode)
+    if (commandCode === 4){
+      game.playerEat(socket, player)
+    } else {
+      game.playerMove(socket, player, commandCode)
+    }
   })
 
   socket.on("disconnecting", async(reason) => {

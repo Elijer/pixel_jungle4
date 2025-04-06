@@ -54,7 +54,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
     // organisms
     evolutionChance: 16, // 4-64 ish
-    plantCycle: 100,
+    plantCycle: 200,
   }
 
   // Currently it's possible to hop from left to right on the map
@@ -463,6 +463,19 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     return false
   }
 
+  function specificAnimalCanMoveToPosition(position: Position, animal: Entity): boolean {
+    console.log(position, animal)
+    const e = energies[animal]!
+    const plant = plantsByPosition[position]
+    if (!plant) return true
+    const plantLevel = levels[plant]
+    console.log(`animal energy is: ${e}`)
+    console.log(`plant level is`, plantLevel)
+    console.log("so comparison is ", (plantLevel! * 16)-1)
+    if (e > (plantLevel! * 16)-1) return true
+    return false
+  }
+
   function plantReproduce(entity: Entity): void {
 
     if (typeof lifespans[entity] !== "number") warn(`${entity} is not a plant, and we can't get seed positions for it`)
@@ -490,6 +503,34 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   const commandKey = [-map.totalCols, map.totalCols, -1, 1]
 
+  function incrementPlayerEnergy(player: Entity): boolean {
+    let currentEnergy = energies[player]
+    if (currentEnergy && currentEnergy < 63){
+      energies[player]! += 1
+      return true
+    }
+    return false
+  }
+
+  function playerEat(
+    socket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>,
+    player: Entity
+  )
+  {
+
+    // TODO: oh make sure that when eating they are getting the right amount of juice
+    // As in, if they eat a higher level plant, they should get more yums
+    const playerPosition = animalPositions[player]!
+    const plant = plantsByPosition[playerPosition]
+    if (plant){
+      removeEntityEntirely(plant)
+      incrementPlayerEnergy(player)
+      // TODO
+      // sendUpdate() // have to send the players pigment representation otherwise it's just the plant overwrite update that gets sent
+      // Or we could check and see like, if a plant dies, maybe actually send the update to account for maybe a player is there
+    }    
+  }
+
   function playerMove(
     socket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>,
     player: Entity,
@@ -501,7 +542,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     if (newPosition > map.positions || newPosition < 0) return false
     if (playerPosition % map.totalCols === 0 && command === 2) return false // going left: prevent from hooking back around to the right (plus up one)
     if (playerPosition % map.totalCols === map.totalCols-1 && command === 3) return false // going right: prevent from hooking back around the left (plus down one)
-    if (inhabitantsAtPosition(newPosition)) return false
+    if (!specificAnimalCanMoveToPosition(newPosition, player)) return false
 
     // otherwise, we're good! Just move!
     animalPositions[player] = newPosition
@@ -646,6 +687,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     handlePlantLifecycles,
     getRandomPositionValue,
     playerMove,
+    playerEat,
     config,
   }
 }
