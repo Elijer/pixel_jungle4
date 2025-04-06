@@ -20,7 +20,7 @@ const colors = ["black", "yellow", "orange", "red"]
 
 // TODO: the server should be passing this kind of thing - there's a note below about this
 const gameconfig = {
-  inputCooldownTime: 60 
+  inputCooldownTime: 3
 }
 
 socket.on("connect", ()=> {
@@ -51,6 +51,7 @@ socket.on("connect", ()=> {
           
           offscreenCtx!.fillStyle = color;
           offscreenCtx!.fillRect(col * squareSize, row * squareSize, squareSize, squareSize);
+          console.log(col * squareSize, row * squareSize, squareSize, squareSize);
         }
       }
     });
@@ -147,11 +148,12 @@ function throttle<T extends (...args: any[]) => void>(func: T, limit: number): T
 
 // resizes both canvases dynamically
 function resizeCanvas() {
-    const size = Math.min(window.innerWidth, window.innerHeight) * 0.90;
-    canvas!.width = size;
-    canvas!.height = size;
-    offscreenCanvas.width = size;
-    offscreenCanvas.height = size;
+  const baseSize = Math.min(window.innerWidth, window.innerHeight) * 0.90;
+  const size = Math.floor(baseSize / 64) * 64; // Round down to nearest multiple of 64
+  canvas!.width = size;
+  canvas!.height = size;
+  offscreenCanvas.width = size;
+  offscreenCanvas.height = size;
 }
 
 

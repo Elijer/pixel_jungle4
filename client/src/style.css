@@ -6,13 +6,28 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh; /* Full viewport height */
-  width: 100vw; /* Full viewport width */
+  height: 100vh;
+  width: 100vw;
   overflow: hidden; /* Prevent scrolling */
 }
 
 #main-canvas {
-  width: 90vmin;
-  height: 90vmin;
-  border-radius: 10px; /* Optional rounded corners */
+  border-radius: 10px;
+  display: block;
+}
+
+/* Mobile: scale with CSS to fit viewport */
+@media (max-width: 768px), (max-height: 768px) {
+  #main-canvas {
+    width: 96vmin;
+    height: 96vmin;
+  }
+}
+
+/* Desktop: no CSS scaling — use native resolution */
+@media (min-width: 769px) and (min-height: 769px) {
+  #main-canvas {
+    width: auto;
+    height: auto;
+  }
 }

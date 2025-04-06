@@ -55,7 +55,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
     // organisms
     evolutionChance: 16, // 4-64 ish
-    plantCycle: 100,
+    plantCycle: 8000,
   }
 
   // Currently it's possible to hop from left to right on the map
