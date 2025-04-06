@@ -1,14 +1,14 @@
 To Do Sequence
 
 > Player Indicator, movement, eating and energy
-- send a true or false on 'u' (update) to let player know that the update is THEM,
+- send a true or false on 'u' (update) to let player know that the update is THEM
   thereby updating the marker that shows where their position is ✅
-- Add additional command allowing players to eat blocks
-- Handle the eat blocks command
-- Increment player energy
+- Add additional command allowing players to eat blocks ✅
+- Handle the eat blocks command ✅
+- Increment player energy ✅
+- Player pigment should change according to energy
 - Make sure players of a certain energy can move past blocks of a certain level (16 can move on level 2, 32 can move on 3, etc)
-  - So I suppose players can ALSO eat blocks below them, since if movement is blocked I don't need to handle eating as well
-- Handle
+  - So I suppose players can ALSO eat blocks below them, since if movement is blocked I don't need to handle eating as well ✅
 - Create energy decrementer
 - Create new events that sound out energy decrement events
 - Handle death

@@ -12,6 +12,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
   type Entity = number
   type Energy = number
   type Level = 1 | 2 | 3
+  type Value = 0 | Level
   type Lifespan = number
   type Mineral = 0 | 1 | 2 | 3
   type Position = number
@@ -54,7 +55,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
     // organisms
     evolutionChance: 16, // 4-64 ish
-    plantCycle: 200,
+    plantCycle: 100,
   }
 
   // Currently it's possible to hop from left to right on the map
@@ -146,11 +147,22 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     }
   }
 
+  function valueAtPosition(position: Position): Value {
+
+    const animalAtPosition = animalsByPosition[position]
+    if (animalAtPosition) return getPlayerLevel(animalAtPosition)
+
+    const plantAtPosition = plantsByPosition[position]
+    if (plantAtPosition) return levels[plantAtPosition]!
+
+    return 0
+  }
+
   function removeEntityEntirely(entity: Entity){
     try {
 
       const position = plantPositions[entity] || animalPositions[entity]
-      sendUpdate(position!, 0)
+      sendUpdate(position!)
         
 
       // simple traits
@@ -167,10 +179,6 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       entities.delete(entity)
 
       recycleEntity(entity)
-      // console.log(`removed ${entity} entirely`)
-      // log(`removed ${entity} entirely`)
-
-      // entityCounterDebug-- // debugging only
 
     } catch (e){
       const msg = `problem removing entity ${entity} entirely: ${e}`
@@ -316,7 +324,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     // let position = 7712 // the middle for now, but will need to generate this randomly
     let position = getRandomPositionValue()
     let entity = createSpatialEntity(position, animalPositions, animalsByPosition)
-    energies[entity] = 16 // come back to this
+    energies[entity] = 15 // come back to this
     sockets.set(entity, socketId)
     entitiesBySocket.set(socketId, entity)
     // let viewIndex = getViewFromPosition(position)
@@ -382,7 +390,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       // Get representation of tile, pack it into a buffer, send it over to the right room for the v
       births[entity] = childBirthtimes
 
-      sendUpdate(position, level)
+      sendUpdate(position)
 
     } catch (e){
       const msg = `Failed to createPlant @ ${position}: ${e}`
@@ -394,10 +402,10 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
   // function sendUpdate(position: Position, val: 0 | 1 | 2 | 3, isYou: boolean = false){
   function sendUpdate(
     position: Position,
-    val: 0 | 1 | 2 | 3,
     socket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any> | null = null){
 
     const { view, localPosition } = getViewAndLocalPositionFromPosition(position)
+    const val = valueAtPosition(position)
 
     // Create a buffer that tells position and pigment of update
     // but does not indicate that it is an update of the current player
@@ -465,14 +473,13 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   function specificAnimalCanMoveToPosition(position: Position, animal: Entity): boolean {
     console.log(position, animal)
-    const e = energies[animal]!
+    // const e = energies[animal]!
+    const animalLevel = getPlayerLevel(animal)
     const plant = plantsByPosition[position]
     if (!plant) return true
     const plantLevel = levels[plant]
-    console.log(`animal energy is: ${e}`)
-    console.log(`plant level is`, plantLevel)
-    console.log("so comparison is ", (plantLevel! * 16)-1)
-    if (e > (plantLevel! * 16)-1) return true
+    console.log(`plant level is${plantLevel} and animalLevel is ${animalLevel}`)
+    if (animalLevel >= plantLevel!) return true
     return false
   }
 
@@ -503,13 +510,13 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   const commandKey = [-map.totalCols, map.totalCols, -1, 1]
 
-  function incrementPlayerEnergy(player: Entity): boolean {
+  function incrementPlayerEnergy(player: Entity): number {
     let currentEnergy = energies[player]
     if (currentEnergy && currentEnergy < 63){
       energies[player]! += 1
-      return true
+      return energies[player]!
     }
-    return false
+    return 0
   }
 
   function playerEat(
@@ -524,7 +531,11 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     const plant = plantsByPosition[playerPosition]
     if (plant){
       removeEntityEntirely(plant)
-      incrementPlayerEnergy(player)
+      const newEnergy = incrementPlayerEnergy(player)
+      if (newEnergy){
+        const newPigment: 0 | 1 | 2 | 3  = getPlayerLevel(player)
+        sendUpdate(playerPosition, socket)
+      }
       // TODO
       // sendUpdate() // have to send the players pigment representation otherwise it's just the plant overwrite update that gets sent
       // Or we could check and see like, if a plant dies, maybe actually send the update to account for maybe a player is there
@@ -551,6 +562,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
     const oldView = getViewFromPosition(playerPosition)
     const newView = getViewFromPosition(newPosition)
+
     // this check could be optimized to not do such accurate checks every move
     if (oldView !== newView){
       socket.leave(`v:${oldView}`)
@@ -558,14 +570,19 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       socket.emit("view", getViewAsBuffer(newPosition))
     } else {
       // Send updated representation of new position player inhabits now
-      sendUpdate(newPosition, 1, socket)
+      sendUpdate(newPosition, socket)
       // Send updated representation of the position they left behind
       const plant = plantsByPosition[playerPosition]
       const plantLevel = plant ? levels[plant] || 0 : 0
-      sendUpdate(playerPosition, plantLevel)
+      sendUpdate(playerPosition)
     }
 
     return true
+  }
+
+  function getPlayerLevel(player: Entity): 0 | 1 | 2 | 3 {
+    const rawLevel = Math.floor(energies[player]! / 16) + 1;
+    return Math.max(0, Math.min(3, rawLevel)) as 0 | 1 | 2 | 3;
   }
 
   function handlePlantLifecycles(): void {

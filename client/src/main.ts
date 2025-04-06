@@ -13,6 +13,9 @@ const ctx = canvas!.getContext("2d");
 const offscreenCanvas = document.createElement("canvas");
 const offscreenCtx = offscreenCanvas.getContext("2d");
 
+ctx!.imageSmoothingEnabled = false;
+offscreenCtx!.imageSmoothingEnabled = false;
+
 const colors = ["black", "yellow", "orange", "red"]
 
 // TODO: the server should be passing this kind of thing - there's a note below about this
