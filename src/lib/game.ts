@@ -47,7 +47,6 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   const config: Record<string, any> = {
 
-    
     // Minerals
     mineralScale: 10,
     mineralSeed: Math.random() * 1000,
@@ -392,12 +391,32 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     }
   }
 
-  function sendUpdate(position: Position, val: 0 | 1 | 2 | 3){
+  // function sendUpdate(position: Position, val: 0 | 1 | 2 | 3, isYou: boolean = false){
+  function sendUpdate(
+    position: Position,
+    val: 0 | 1 | 2 | 3,
+    socket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any> | null = null){
+
     const { view, localPosition } = getViewAndLocalPositionFromPosition(position)
-    const packedValue = (localPosition << 2) | val
-    const buffer = Buffer.alloc(2); // 12 for location, 2 for pigment
-    buffer.writeUInt16BE(packedValue, 0)
-    socketIo.to(`v:${view}`).emit('u', buffer)
+
+    // Create a buffer that tells position and pigment of update
+    // but does not indicate that it is an update of the current player
+    const othersPackedValue = (localPosition << 4) | (val << 2 ) | 0
+    const othersBuffer = Buffer.alloc(2); // 12 for location, 2 for pigment, 1 for isYou
+    othersBuffer.writeUInt16BE(othersPackedValue, 0)
+
+    if (!socket){
+      socketIo.to(`v:${view}`).emit('u', othersBuffer) // send to all parties by room
+    } else {
+      // otherwise, create a buffer that indicates selfhood just for the party that moved
+      // and send that to them, and the non-selfhood update to everyone else
+      const selfPackedValue = (localPosition << 4) | (val << 2 ) | 1 << 1 // the 0 position is still remaining empty
+      const selfBuffer = Buffer.alloc(2)
+      selfBuffer.writeUInt16BE(selfPackedValue, 0)
+      console.log(printBufferAsBinary(selfBuffer))
+      socket?.emit('u', selfBuffer)
+      socket.to(`v:${view}`).emit('u', othersBuffer) // sends to everyone BESIDES socket (note it is socket.to and not socketIo.to)
+    }
   }
 
   function decrementLifespan(entity: Entity): void {
@@ -499,7 +518,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       socket.emit("view", getViewAsBuffer(newPosition))
     } else {
       // Send updated representation of new position player inhabits now
-      sendUpdate(newPosition, 1)
+      sendUpdate(newPosition, 1, socket)
       // Send updated representation of the position they left behind
       const plant = plantsByPosition[playerPosition]
       const plantLevel = plant ? levels[plant] || 0 : 0
@@ -633,3 +652,14 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 }
 
 export default initializeGame
+
+
+function printBufferAsBinary(buffer: any) {
+  const binaryStrings = [];
+  for (let i = 0; i < buffer.length; i++) {
+    // Convert to binary and pad with leading zeros
+    const binary = buffer[i].toString(2).padStart(8, '0');
+    binaryStrings.push(binary);
+  }
+  return binaryStrings.join(' ')
+}

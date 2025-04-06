@@ -57,21 +57,57 @@ socket.on("connect", ()=> {
       const view = new DataView(buffer);
       const packedValue = view.getUint16(0, false); // Read 16-bit integer (big-endian)
 
-      const num12bit = (packedValue >> 2) & 0xFFF; // Extract 12-bit value
-      const num2bit = packedValue & 0x3; // Extract 2-bit value
+      const localPosition = packedValue >> 4; // Bits 15–4
+      const val = (packedValue >> 2) & 0b11;  // Bits 3–2
+      const isYou = (packedValue >> 1) & 0b1; // Bit 1
+      console.log({localPosition, val, isYou})
 
-      return { num12bit, num2bit };
+      return {
+        localPosition,
+        val,
+        isYou: Boolean(isYou),
+      };
+      // const num12bit = (packedValue >> 2) & 0xFFF; // Extract 12-bit value
+      // const num2bit = packedValue & 0x3; // Extract 2-bit value
+
+    //   return { num12bit, num2bit };
     }
+
+    // Cached circle thing
+    const squareSize = offscreenCanvas.width / 64;
+    const cache = document.createElement("canvas");
+    cache.width = cache.height = squareSize;
+    const cctx = cache.getContext("2d")!;
+    cctx.fillStyle = "rgba(0, 0, 0, 0.5)";  // purple with 50% opacity
+    
+    const radius = squareSize / Math.sqrt(3); // ~0.577 * squareSize
+    
+    cctx.beginPath();
+    cctx.arc(
+      squareSize / 2, // x center
+      squareSize / 2, // y center
+      radius / 2,     // smaller radius for 1/3 area
+      0, 2 * Math.PI
+    );
+    cctx.fill();
 
     socket.on("u", (buff)=>{
 
       const squareSize = offscreenCanvas.width / 64;
-      const { num12bit: tile, num2bit: pigment } = extractUpdate(buff);
+      const { localPosition: tile, val: pigment, isYou: isYou } = extractUpdate(buff);
       const row = Math.floor(tile/64)
       const col = tile % 64
-      
+
       offscreenCtx!.fillStyle = colors[pigment]
       offscreenCtx!.fillRect(col * squareSize, row * squareSize, squareSize, squareSize);
+
+      if (isYou){
+        offscreenCtx!.drawImage(
+          cache,
+          col * squareSize,
+          row * squareSize
+        );
+      }
     })
 
   socket.on("disconnect", ()=>{
@@ -94,7 +130,6 @@ const keyCommandBindings: { [key: string]: number } = {
 
 const controlsListener = throttle((event: KeyboardEvent) => {
   const commandCode = keyCommandBindings[event.key.toLowerCase()];
-  console.log(commandCode)
   if (commandCode !== undefined) {
     socket.emit("input", new Uint8Array([commandCode]));
   }

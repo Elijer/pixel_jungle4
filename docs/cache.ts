@@ -384,6 +384,8 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   function sendUpdate(position: Position, val: 0 | 1 | 2 | 3){
     const { view, localPosition } = getViewAndLocalPositionFromPosition(position)
+    // check
+
     const packedValue = (localPosition << 2) | val
     const buffer = Buffer.alloc(2); // 12 for location, 2 for pigment
     buffer.writeUInt16BE(packedValue, 0)
