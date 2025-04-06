@@ -60,7 +60,6 @@ socket.on("connect", ()=> {
       const localPosition = packedValue >> 4; // Bits 15–4
       const val = (packedValue >> 2) & 0b11;  // Bits 3–2
       const isYou = (packedValue >> 1) & 0b1; // Bit 1
-      console.log({localPosition, val, isYou})
 
       return {
         localPosition,

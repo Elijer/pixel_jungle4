@@ -413,7 +413,6 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       const selfPackedValue = (localPosition << 4) | (val << 2 ) | 1 << 1 // the 0 position is still remaining empty
       const selfBuffer = Buffer.alloc(2)
       selfBuffer.writeUInt16BE(selfPackedValue, 0)
-      console.log(printBufferAsBinary(selfBuffer))
       socket?.emit('u', selfBuffer)
       socket.to(`v:${view}`).emit('u', othersBuffer) // sends to everyone BESIDES socket (note it is socket.to and not socketIo.to)
     }
