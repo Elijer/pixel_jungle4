@@ -67,10 +67,6 @@ socket.on("connect", ()=> {
         val,
         isYou: Boolean(isYou),
       };
-      // const num12bit = (packedValue >> 2) & 0xFFF; // Extract 12-bit value
-      // const num2bit = packedValue & 0x3; // Extract 2-bit value
-
-    //   return { num12bit, num2bit };
     }
 
     // Cached circle thing
