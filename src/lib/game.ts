@@ -4,6 +4,11 @@ import type  { Socket } from 'socket.io'
 import type { Server, DefaultEventsMap } from 'socket.io'
 import { simplexPositive } from './simplex.js';
 
+const testingPositions = [1, 20, 32, 44, 55, 66]
+let pullTestingPositions = [...testingPositions]
+
+type ASocket = Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
+
 function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>) {
 
   let debugMode = false
@@ -95,13 +100,13 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   const predators: Set<Entity> = new Set()
   const births: (number[] | undefined)[] = []
-  const sockets: Map<Entity, string> = new Map() // so this is so I can find a socket for entities in a view I guess?
+  const sockets: Map<Entity, ASocket> = new Map() // so this is so I can find a socket for entities in a view I guess?
 
   // Reverse Trait Maps
   // Whereas in these, the index is actually the position on the map 
   const animalsByPosition: (Entity | undefined)[] = Array.from({length: map.positions})
   const plantsByPosition: (Entity | undefined)[] = Array.from({length: map.positions})
-  const entitiesBySocket: Map<string, Entity> = new Map() // and this is so that I can get an entity from a socket, which I may not need because it should be in the scope
+  const entitiesBySocketId: Map<string, Entity> = new Map() // and this is so that I can get an entity from a socket, which I may not need because it should be in the scope
 
   const minerals: Mineral[] = Array.from({length: map.positions})
 
@@ -122,6 +127,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
   }
 
   const randomVacancies = new LIFIQueue(map.positions);
+  // const randomVacancies = new LIFIQueue(64); //  for testing, just use top
 
   function getEntityId(): number {
     try {
@@ -165,9 +171,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     try {
 
       const position = plantPositions[entity] || animalPositions[entity]
-      sendUpdate(position!)
         
-
       // simple traits
       energies[entity]  = undefined
       levels[entity]    = undefined
@@ -182,6 +186,8 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       entities.delete(entity)
 
       recycleEntity(entity)
+
+      sendUpdate(position!)
 
     } catch (e){
       const msg = `problem removing entity ${entity} entirely: ${e}`
@@ -278,15 +284,15 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
   }
 
   // SOCKETS
-  function addSocket(entity: Entity, socketId: string): void {
-    sockets.set(entity, socketId)
+  function addSocket(entity: Entity, socket: ASocket): void {
+    sockets.set(entity, socket)
   }
 
   function removeSocket(entity: Entity): void {
     if (sockets.has(entity)){
       const socket = sockets.get(entity)!
       sockets.delete(entity)
-      entitiesBySocket.delete(socket)
+      entitiesBySocketId.delete(socket.id)
     }
   }
 
@@ -323,13 +329,16 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     }
   }
 
-  function createPlayer(socketId: string): {player: Entity, position: Position} {
+  function createPlayer(socket: ASocket): {player: Entity, position: Position} {
+    console.log(`creating player for socket ${socket.id}`)
     // let position = 7712 // the middle for now, but will need to generate this randomly
-    let position = getRandomPositionValue()
+    // let position = getRandomPositionValue()
+    if (!pullTestingPositions.length) pullTestingPositions = [...testingPositions]
+    let position = testingPositions.pop()!
     let entity = createSpatialEntity(position, animalPositions, animalsByPosition)
     energies[entity] = 15 // come back to this
-    sockets.set(entity, socketId)
-    entitiesBySocket.set(socketId, entity)
+    sockets.set(entity, socket)
+    entitiesBySocketId.set(socket.id, entity)
     // let viewIndex = getViewFromPosition(position)
     // viewRooms.get(viewIndex)!.add(socketId)
     return {player: entity, position}
@@ -339,8 +348,9 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     try {
       const position = animalPositions[player]
       let viewIndex = getViewFromPosition(position!)
-      let socketId = sockets.get(player)
-      viewRooms.get(viewIndex)?.delete(socketId!)
+      let socket = sockets.get(player)
+      viewRooms.get(viewIndex)?.delete(socket?.id!)
+      console.log(`removed player for socket ${socket?.id}`)
       removeEntityEntirely(player)
     } catch(e){
       warn(`Problem removing player [${player}]: ${e}`)
@@ -405,7 +415,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
   // function sendUpdate(position: Position, val: 0 | 1 | 2 | 3, isYou: boolean = false){
   function sendUpdate(
     position: Position,
-    socket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any> | null = null){
+    socket: ASocket | null = null){
 
     const { view, localPosition } = getViewAndLocalPositionFromPosition(position)
     const val = valueAtPosition(position)
@@ -532,7 +542,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
   }
 
   function playerEat(
-    socket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>,
+    socket: ASocket,
     player: Entity
   )
   {
@@ -555,7 +565,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
   }
 
   function playerMove(
-    socket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>,
+    socket: ASocket,
     player: Entity,
     command: number): boolean
   {
@@ -636,31 +646,33 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
   }
 
   function handleEnergyDrainCycles(){
-    for (let i = 0; i < animalPositions.length; i++){
-      if (!animalPositions[i]) continue
-      const e = decrementPlayerEnergy(i)
-      if (e === 0){
-        removeEntityEntirely(i)
+    for (const [_, socket] of sockets){
+      const player = entitiesBySocketId.get(socket.id)
+      if (!player) throw new Error(`No player exists for socket ${socket.id}`)
+      const position = animalPositions[player]
+      if (!position){
+        warn(`when decrementing players by socket, no position found for animal ${player}`)
+        continue
+      }
 
-        sendUpdate(animalPositions[i]!)
-        // TODO
-        // right now, without socket, this will overwrite the lil player indicatorr
+      const e = decrementPlayerEnergy(player)
+      if (e === 0){
+        removeEntityEntirely(player)
+        // sendUpdate(position) // I think this is redundant - it's done in removeEntityEntirely
         // TODO
          // I think this will update everyone so that the thing is dead?
         // But we also need to do whatever we do at the beginning
         // AND send a meta update of some kind to let them know they died of hunger. They should probably get sent to some page. And then
         // I guess they could just be navigated right back again, and start over.
       } else {
-        sendUpdate(animalPositions[i]!)
+        sendUpdate(position, socket)
         // this is where we probably have to
         // find the socket that we've saved (and we'll have to save it if we haven't)
         // for that player, and send ONLY THEM a lil update about what's going down
         // I think we'll do someting similar if they die too -- we'll need their socket
       }
-      // this DOES cycle through a shitton of plants
-      // I dunno if there's really a better way though
-      
-      console.log(animalPositions[i])
+
+
     }
   }
 

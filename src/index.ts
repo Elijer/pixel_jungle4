@@ -25,7 +25,7 @@ const io = new Server(httpServer, {
 const game = initializeGame(io)
 
 io.on("connection", (socket) => {
-  const { player, position } = game.createPlayer(socket.id)
+  const { player, position } = game.createPlayer(socket)
   let view = game.getViewFromPosition(position)
 
   // Send initial view as a buffer

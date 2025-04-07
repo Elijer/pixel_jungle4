@@ -87,7 +87,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
   // Whereas in these, the index is actually the position on the map 
   const animalsByPosition: (Entity | undefined)[] = Array.from({length: map.positions})
   const plantsByPosition: (Entity | undefined)[] = Array.from({length: map.positions})
-  const entitiesBySocket: Map<string, Entity> = new Map() // and this is so that I can get an entity from a socket, which I may not need because it should be in the scope
+  const entitiesBySocketId: Map<string, Entity> = new Map() // and this is so that I can get an entity from a socket, which I may not need because it should be in the scope
 
   const minerals: Mineral[] = Array.from({length: map.positions})
 
@@ -265,7 +265,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     if (sockets.has(entity)){
       const socket = sockets.get(entity)!
       sockets.delete(entity)
-      entitiesBySocket.delete(socket)
+      entitiesBySocketIdId.delete(socket)
     }
   }
 
@@ -308,7 +308,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     let entity = createSpatialEntity(position, animalPositions, animalsByPosition)
     energies[entity] = 33 // come back to this
     sockets.set(entity, socketId)
-    entitiesBySocket.set(socketId, entity)
+    entitiesBySocketId.set(socketId, entity)
     // let viewIndex = getViewFromPosition(position)
     // viewRooms.get(viewIndex)!.add(socketId)
     return {player: entity, position}
