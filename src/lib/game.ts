@@ -56,6 +56,9 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     // organisms
     evolutionChance: 16, // 4-64 ish
     plantCycle: 8000,
+
+    // Player
+    energyDrainCycle: 4000
   }
 
   // Currently it's possible to hop from left to right on the map
@@ -472,7 +475,6 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
   }
 
   function specificAnimalCanMoveToPosition(position: Position, animal: Entity): boolean {
-    console.log(position, animal)
     // const e = energies[animal]!
     const animalLevel = getPlayerLevel(animal)
     const plant = plantsByPosition[position]
@@ -517,6 +519,16 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       return energies[player]!
     }
     return 0
+  }
+
+  function decrementPlayerEnergy(player: Entity): number {
+    let currentEnergy = energies[player]
+    if (currentEnergy && currentEnergy > 0){
+      energies[player]! -= 1
+      return energies[player]!
+    } else {
+      throw new Error("player energy was already at 0 and an attempt was made to decrement it")
+    }
   }
 
   function playerEat(
@@ -623,6 +635,35 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     // console.timeEnd("st")
   }
 
+  function handleEnergyDrainCycles(){
+    for (let i = 0; i < animalPositions.length; i++){
+      if (!animalPositions[i]) continue
+      const e = decrementPlayerEnergy(i)
+      if (e === 0){
+        removeEntityEntirely(i)
+
+        sendUpdate(animalPositions[i]!)
+        // TODO
+        // right now, without socket, this will overwrite the lil player indicatorr
+        // TODO
+         // I think this will update everyone so that the thing is dead?
+        // But we also need to do whatever we do at the beginning
+        // AND send a meta update of some kind to let them know they died of hunger. They should probably get sent to some page. And then
+        // I guess they could just be navigated right back again, and start over.
+      } else {
+        sendUpdate(animalPositions[i]!)
+        // this is where we probably have to
+        // find the socket that we've saved (and we'll have to save it if we haven't)
+        // for that player, and send ONLY THEM a lil update about what's going down
+        // I think we'll do someting similar if they die too -- we'll need their socket
+      }
+      // this DOES cycle through a shitton of plants
+      // I dunno if there's really a better way though
+      
+      console.log(animalPositions[i])
+    }
+  }
+
   // NETWORK ABSTRACTIONS
 
   // TODO: This should return a buffer representation of the view of the position given
@@ -702,6 +743,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     destroyPlayerMuahaha,
     getViewAsBuffer,
     handlePlantLifecycles,
+    handleEnergyDrainCycles,
     getRandomPositionValue,
     playerMove,
     playerEat,

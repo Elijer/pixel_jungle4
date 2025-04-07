@@ -11,6 +11,13 @@ body {
   overflow: hidden; /* Prevent scrolling */
 }
 
+#energy-canvas {
+  image-rendering: pixelated;
+  margin-left: 20px;
+  background: #111;
+  border-radius: 10px;
+}
+
 #main-canvas {
   border-radius: 10px;
   display: block;

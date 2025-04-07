@@ -6,17 +6,23 @@ let socketAddress = window.location.hostname === "localhost" ? "ws://localhost:3
 const socket = io(socketAddress)
 
 // Grab the canvas
-const canvas = document.querySelector("canvas");
-const ctx = canvas!.getContext("2d");
+const canvas = document.getElementById("main-canvas") as HTMLCanvasElement;
+const ctx = canvas.getContext("2d");
 
 // Create an off-screen canvas
 const offscreenCanvas = document.createElement("canvas");
 const offscreenCtx = offscreenCanvas.getContext("2d");
 
-ctx!.imageSmoothingEnabled = false;
-offscreenCtx!.imageSmoothingEnabled = false;
-
 const colors = ["black", "yellow", "orange", "red"]
+
+const energyCanvas = document.querySelector("#energy-canvas") as HTMLCanvasElement
+const energyCtx = energyCanvas!.getContext("2d")
+
+for (let i = 0; i<8; i++){
+  for (let j = 0; j < 8; j++){
+    energyCtx!.fillRect(i * 32 + 2, j * 32 + 2, 30, 30);
+  }
+}
 
 // TODO: the server should be passing this kind of thing - there's a note below about this
 const gameconfig = {
