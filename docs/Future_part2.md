@@ -6,11 +6,11 @@ To Do Sequence
 - Add additional command allowing players to eat blocks ✅
 - Handle the eat blocks command ✅
 - Increment player energy ✅
-- Player pigment should change according to energy
+- Player pigment should change according to energy ✅
 - Make sure players of a certain energy can move past blocks of a certain level (16 can move on level 2, 32 can move on 3, etc)
   - So I suppose players can ALSO eat blocks below them, since if movement is blocked I don't need to handle eating as well ✅
-- Create energy decrementer
-- Create new events that sound out energy decrement events
+- Create energy decrementer ✏️
+- Create new events that sound out energy decrement events ⏱️
 - Handle death
 - Make a message on the frontend of some kind that handles death
 
