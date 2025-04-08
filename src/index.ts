@@ -53,6 +53,7 @@ io.on("connection", (socket) => {
   socket.on("disconnecting", async(reason) => {
     log(`player ${player} disconnected due to ${reason}`)
     game.destroyPlayerMuahaha(player)
+    game.destroyConnectonMuahaha(socket.id)
   })
 
 })

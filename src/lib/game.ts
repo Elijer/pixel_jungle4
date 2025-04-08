@@ -60,7 +60,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
     // organisms
     evolutionChance: 16, // 4-64 ish
-    plantCycle: 8000,
+    plantCycle: 500,
 
     // Player
     energyDrainCycle: 4000
@@ -100,13 +100,11 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   const predators: Set<Entity> = new Set()
   const births: (number[] | undefined)[] = []
-  const sockets: Map<Entity, ASocket> = new Map() // so this is so I can find a socket for entities in a view I guess?
 
   // Reverse Trait Maps
   // Whereas in these, the index is actually the position on the map 
   const animalsByPosition: (Entity | undefined)[] = Array.from({length: map.positions})
   const plantsByPosition: (Entity | undefined)[] = Array.from({length: map.positions})
-  const entitiesBySocketId: Map<string, Entity> = new Map() // and this is so that I can get an entity from a socket, which I may not need because it should be in the scope
 
   const minerals: Mineral[] = Array.from({length: map.positions})
 
@@ -121,6 +119,10 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
   // This is where all player connections get stored
   // and whenever a tile changes, all all players in that tile's view will be notified
   const viewRooms: Map<number, Set<string>> = new Map()
+  const sockets: Map<Entity, ASocket> = new Map()
+  // conflating this with active players may get confusing if a player dies but
+  // I don't want to kill the connection so I can invite them to another game
+  const entitiesBySocketId: Map<string, Entity> = new Map() // and this is so that I can get an entity from a socket, which I may not need because it should be in the scope
 
   for (let i = 0; i < 16; i++){
     viewRooms.set(i, new Set())
@@ -178,9 +180,8 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       lifespans[entity] = undefined
       births[entity]    = undefined
 
-      // more entangled traits
+      // less simple traits
       removePosition(entity)
-      removeSocket(entity)
 
       predators.delete(entity)
       entities.delete(entity)
@@ -283,19 +284,6 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     }
   }
 
-  // SOCKETS
-  function addSocket(entity: Entity, socket: ASocket): void {
-    sockets.set(entity, socket)
-  }
-
-  function removeSocket(entity: Entity): void {
-    if (sockets.has(entity)){
-      const socket = sockets.get(entity)!
-      sockets.delete(entity)
-      entitiesBySocketId.delete(socket.id)
-    }
-  }
-
   function getViewFromPosition(position: Position): number {
     // This could also be cached, but would it even be faster?
 
@@ -330,7 +318,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
   }
 
   function createPlayer(socket: ASocket): {player: Entity, position: Position} {
-    console.log(`creating player for socket ${socket.id}`)
+    log(`creating player for socket ${socket.id}`)
     // let position = 7712 // the middle for now, but will need to generate this randomly
     // let position = getRandomPositionValue()
     if (!pullTestingPositions.length) pullTestingPositions = [...testingPositions]
@@ -350,13 +338,22 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       let viewIndex = getViewFromPosition(position!)
       let socket = sockets.get(player)
       viewRooms.get(viewIndex)?.delete(socket?.id!)
-      console.log(`removed player for socket ${socket?.id}`)
+      log(`removed player for socket ${socket?.id} (Muahaha)`)
       removeEntityEntirely(player)
     } catch(e){
       warn(`Problem removing player [${player}]: ${e}`)
     }
 
-  } 
+  }
+
+  // Separating this from destroying player because they are really quite different,
+  // even though they often happen at the same time
+  function destroyConnectonMuahaha(socketId: string){
+    const entityBySocket = entitiesBySocketId.get(socketId)
+    if (entityBySocket) sockets.delete(entityBySocket!)
+    entitiesBySocketId.delete(socketId)
+    log(`destroyed connection ${socketId} (Muahaha)`)
+  }
 
   // PLANTS
   function createPlant(level: Level, position: Position | undefined = undefined, ): void {
@@ -652,6 +649,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
   }
 
   function handleEnergyDrainCycles(){
+    // Iterate through all active sockets
     for (const [_, socket] of sockets){
       const player = entitiesBySocketId.get(socket.id)
       if (!player) throw new Error(`No player exists for socket ${socket.id}`)
@@ -663,7 +661,8 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
       const e = decrementPlayerEnergy(player)
       if (e === 0){
-        removeEntityEntirely(player)
+        // removeEntityEntirely(player)
+        destroyPlayerMuahaha(player) // I think this is a better fit
         // sendUpdate(position) // I think this is redundant - it's done in removeEntityEntirely
         // TODO
          // I think this will update everyone so that the thing is dead?
@@ -754,11 +753,12 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
   //   console.log(binaryStrings.join(' ')); // Print the binary representation of each byte
   // }
   return {
-    entities,
+  entities,
     createPlant,
     getViewFromPosition,
     createPlayer,
     destroyPlayerMuahaha,
+    destroyConnectonMuahaha,
     getViewAsBuffer,
     handlePlantLifecycles,
     handleEnergyDrainCycles,
