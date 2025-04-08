@@ -1,5 +1,6 @@
 import './style.css';
 import { io } from "socket.io-client";
+const jitterOn = true
 
 const herokuUrl = 'set the url for whatever service you are using'
 let socketAddress = window.location.hostname === "localhost" ? "ws://localhost:3000" : herokuUrl
@@ -13,7 +14,20 @@ const ctx = canvas.getContext("2d");
 const offscreenCanvas = document.createElement("canvas");
 const offscreenCtx = offscreenCanvas.getContext("2d");
 
-const colors = ["black", "yellow", "orange", "red"]
+// const colors = ["black", "yellow", "orange", "red"]
+const baseColors = [
+  [0, 0, 0],    // Midnight blue
+  [90, 150, 90],     // Moss green
+  [0, 110, 110],   // Forest green
+  [64, 224, 208],   // Turquoise
+];
+
+function jitterColor([r, g, b]: number[]): string {
+  // const jitter = () => Math.floor(Math.random() * 120); // +/-5 range
+  const jitter = () => Math.floor(Math.random() * 20) / 3
+  // return `rgb(${r + jitter()}, ${g + jitter()}, ${b + jitter()})`;
+  return `rgb(${r + jitter()}, ${g+jitter()*2}, ${b})`;
+}
 
 const energyCanvas = document.querySelector("#energy-canvas") as HTMLCanvasElement
 const energyCtx = energyCanvas!.getContext("2d")
@@ -53,7 +67,7 @@ socket.on("connect", ()=> {
       for (let j = 0; j < 4; j++) {
         const v = (byte >> (2 * j)) & 0b11;
         
-        const color = colors[v];
+        const color = v === 0 ? "black" : jitterColor(baseColors[v]);
         const tileNum = i * 4 + j;
         const row = Math.floor(tileNum / 64);
         const col = tileNum % 64;
@@ -99,7 +113,7 @@ socket.on("connect", ()=> {
     const row = Math.floor(tile/64)
     const col = tile % 64
 
-    offscreenCtx!.fillStyle = colors[pigment]
+    offscreenCtx!.fillStyle = pigment === 0 ? "black" : jitterColor(baseColors[pigment]);
     offscreenCtx!.fillRect(col * squareSize, row * squareSize, squareSize, squareSize);
 
     if (isYou){

@@ -54,7 +54,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
   const config: Record<string, any> = {
 
     // Minerals
-    mineralScale: 10,
+    mineralScale: 60,
     mineralSeed: Math.random() * 1000,
     mineralInversion: false,
 
@@ -320,9 +320,9 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
   function createPlayer(socket: ASocket): {player: Entity, position: Position} {
     log(`creating player for socket ${socket.id}`)
     // let position = 7712 // the middle for now, but will need to generate this randomly
-    // let position = getRandomPositionValue()
-    if (!pullTestingPositions.length) pullTestingPositions = [...testingPositions]
-    let position = testingPositions.pop()!
+    let position = getRandomPositionValue()
+    // if (!pullTestingPositions.length) pullTestingPositions = [...testingPositions]
+    // let position = testingPositions.pop()!
     let entity = createSpatialEntity(position, animalPositions, animalsByPosition)
     energies[entity] = 15 // come back to this
     sockets.set(entity, socket)
