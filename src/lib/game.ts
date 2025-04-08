@@ -648,6 +648,19 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     // console.timeEnd("st")
   }
 
+  function sendEnergyMessage(socket: ASocket, energy: Energy){
+    /*
+    informative energy event messages
+    - you were eaten
+    - you died of starvation
+    - you ate something (and gained energy)
+    - you lost energy
+    */
+    const buffer = Buffer.alloc(1)
+    buffer.writeUInt8(energy, 0)
+    socket.emit('e', buffer)
+  }
+
   function handleEnergyDrainCycles(){
     // Iterate through all active sockets
     for (const [_, socket] of sockets){
@@ -676,7 +689,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
         // for that player, and send ONLY THEM a lil update about what's going down
         // I think we'll do someting similar if they die too -- we'll need their socket
       }
-
+      sendEnergyMessage(socket, e)
 
     }
   }

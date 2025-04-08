@@ -61,21 +61,16 @@ socket.on("connect", ()=> {
         }
       }
     });
-
+    
     // Assume we receive a 2-byte ArrayBuffer from WebSocket
-    function extractUpdate(buffer: ArrayBuffer) {
+    function extractSingleValueUpdate(buffer: ArrayBuffer) {
       const view = new DataView(buffer);
-      const packedValue = view.getUint16(0, false); // Read 16-bit integer (big-endian)
-
-      const localPosition = packedValue >> 4; // Bits 15–4
-      const val = (packedValue >> 2) & 0b11;  // Bits 3–2
-      const isYou = (packedValue >> 1) & 0b1; // Bit 1
-
-      return {
-        localPosition,
-        val,
-        isYou: Boolean(isYou),
-      };
+      const byte = view.getUint8(0); // Read 1 byte
+    
+      // Mask the lower 6 bits (0b00111111 === 63)
+      const value = byte & 0b00111111;
+    
+      return value;
     }
 
     // Cached circle thing
@@ -113,6 +108,10 @@ socket.on("connect", ()=> {
           row * squareSize
         );
       }
+    })
+
+    socket.on("e", (buff)=>{
+      console.log(extractSingleValueUpdate(buff))
     })
 
   socket.on("disconnect", ()=>{
