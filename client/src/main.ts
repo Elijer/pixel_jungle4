@@ -61,6 +61,22 @@ socket.on("connect", ()=> {
         }
       }
     });
+
+    // Assume we receive a 2-byte ArrayBuffer from WebSocket
+    function extractUpdate(buffer: ArrayBuffer) {
+      const view = new DataView(buffer);
+      const packedValue = view.getUint16(0, false); // Read 16-bit integer (big-endian)
+
+      const localPosition = packedValue >> 4; // Bits 15–4
+      const val = (packedValue >> 2) & 0b11;  // Bits 3–2
+      const isYou = (packedValue >> 1) & 0b1; // Bit 1
+
+      return {
+        localPosition,
+        val,
+        isYou: Boolean(isYou),
+      };
+    }
     
     // Assume we receive a 2-byte ArrayBuffer from WebSocket
     function extractSingleValueUpdate(buffer: ArrayBuffer) {
