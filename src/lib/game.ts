@@ -492,7 +492,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
     if (plant){
       const plantLevel = levels[plant]
-      if (animalLevel >= plantLevel!) return false
+      if (animalLevel < plantLevel!) return false
     }
 
     if (foreignAnimal){
