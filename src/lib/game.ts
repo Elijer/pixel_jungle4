@@ -488,11 +488,19 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     // const e = energies[animal]!
     const animalLevel = getPlayerLevel(animal)
     const plant = plantsByPosition[position]
-    if (!plant) return true
-    const plantLevel = levels[plant]
-    console.log(`plant level is${plantLevel} and animalLevel is ${animalLevel}`)
-    if (animalLevel >= plantLevel!) return true
-    return false
+    const foreignAnimal = animalsByPosition[position]
+
+    if (plant){
+      const plantLevel = levels[plant]
+      if (animalLevel >= plantLevel!) return false
+    }
+
+    if (foreignAnimal){
+      // check if foreign animal is predator, or if current animal is predator. But for now...
+      return false
+    }
+
+    return true
   }
 
   function plantReproduce(entity: Entity): void {
@@ -569,20 +577,20 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     player: Entity,
     command: number): boolean
   {
-    const playerPosition = animalPositions[player]
-    if (typeof playerPosition !== 'number') return false
-    const newPosition = playerPosition + commandKey[command]
+    const oldPosition = animalPositions[player]
+    if (typeof oldPosition !== 'number') return false
+    const newPosition = oldPosition + commandKey[command]
     if (newPosition > map.positions || newPosition < 0) return false
-    if (playerPosition % map.totalCols === 0 && command === 2) return false // going left: prevent from hooking back around to the right (plus up one)
-    if (playerPosition % map.totalCols === map.totalCols-1 && command === 3) return false // going right: prevent from hooking back around the left (plus down one)
+    if (oldPosition % map.totalCols === 0 && command === 2) return false // going left: prevent from hooking back around to the right (plus up one)
+    if (oldPosition % map.totalCols === map.totalCols-1 && command === 3) return false // going right: prevent from hooking back around the left (plus down one)
     if (!specificAnimalCanMoveToPosition(newPosition, player)) return false
 
     // otherwise, we're good! Just move!
     animalPositions[player] = newPosition
-    animalsByPosition[playerPosition] = undefined
+    animalsByPosition[oldPosition] = undefined
     animalsByPosition[newPosition] = player
 
-    const oldView = getViewFromPosition(playerPosition)
+    const oldView = getViewFromPosition(oldPosition)
     const newView = getViewFromPosition(newPosition)
 
     // this check could be optimized to not do such accurate checks every move
@@ -594,9 +602,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       // Send updated representation of new position player inhabits now
       sendUpdate(newPosition, socket)
       // Send updated representation of the position they left behind
-      const plant = plantsByPosition[playerPosition]
-      const plantLevel = plant ? levels[plant] || 0 : 0
-      sendUpdate(playerPosition)
+      sendUpdate(oldPosition)
     }
 
     return true
