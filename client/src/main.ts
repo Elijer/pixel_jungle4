@@ -39,96 +39,96 @@ socket.on("connect", ()=> {
   const listenerController = new AbortController();
   const { signal } = listenerController; // add this to key bindings to efficiently clean them up
 
-    socket.on("view", (buff) => {
-      const squareSize = offscreenCanvas.width / 64;
-      const dv = new DataView(buff);
-      
-      for (let i = 0; i < dv.byteLength; i++) {
-        const byte = dv.getUint8(i);
-        
-        // Unpack in simple ascending order
-        for (let j = 0; j < 4; j++) {
-          const v = (byte >> (2 * j)) & 0b11;
-          
-          const color = colors[v];
-          const tileNum = i * 4 + j;
-          const row = Math.floor(tileNum / 64);
-          const col = tileNum % 64;
-          
-          offscreenCtx!.fillStyle = color;
-          offscreenCtx!.fillRect(col * squareSize, row * squareSize, squareSize, squareSize);
-          console.log(col * squareSize, row * squareSize, squareSize, squareSize);
-        }
-      }
-    });
-
-    // Assume we receive a 2-byte ArrayBuffer from WebSocket
-    function extractUpdate(buffer: ArrayBuffer) {
-      const view = new DataView(buffer);
-      const packedValue = view.getUint16(0, false); // Read 16-bit integer (big-endian)
-
-      const localPosition = packedValue >> 4; // Bits 15–4
-      const val = (packedValue >> 2) & 0b11;  // Bits 3–2
-      const isYou = (packedValue >> 1) & 0b1; // Bit 1
-
-      return {
-        localPosition,
-        val,
-        isYou: Boolean(isYou),
-      };
-    }
-    
-    // Assume we receive a 2-byte ArrayBuffer from WebSocket
-    function extractSingleValueUpdate(buffer: ArrayBuffer) {
-      const view = new DataView(buffer);
-      const byte = view.getUint8(0); // Read 1 byte
-    
-      // Mask the lower 6 bits (0b00111111 === 63)
-      const value = byte & 0b00111111;
-    
-      return value;
-    }
-
-    // Cached circle thing
+  socket.on("view", (buff) => {
     const squareSize = offscreenCanvas.width / 64;
-    const cache = document.createElement("canvas");
-    cache.width = cache.height = squareSize;
-    const cctx = cache.getContext("2d")!;
-    cctx.fillStyle = "rgba(0, 0, 0, 0.5)";  // purple with 50% opacity
+    const dv = new DataView(buff);
     
-    const radius = squareSize / Math.sqrt(3); // ~0.577 * squareSize
-    
-    cctx.beginPath();
-    cctx.arc(
-      squareSize / 2, // x center
-      squareSize / 2, // y center
-      radius / 2,     // smaller radius for 1/3 area
-      0, 2 * Math.PI
-    );
-    cctx.fill();
-
-    socket.on("u", (buff)=>{
-
-      const squareSize = offscreenCanvas.width / 64;
-      const { localPosition: tile, val: pigment, isYou: isYou } = extractUpdate(buff);
-      const row = Math.floor(tile/64)
-      const col = tile % 64
-
-      offscreenCtx!.fillStyle = colors[pigment]
-      offscreenCtx!.fillRect(col * squareSize, row * squareSize, squareSize, squareSize);
-
-      if (isYou){
-        offscreenCtx!.drawImage(
-          cache,
-          col * squareSize,
-          row * squareSize
-        );
+    for (let i = 0; i < dv.byteLength; i++) {
+      const byte = dv.getUint8(i);
+      
+      // Unpack in simple ascending order
+      for (let j = 0; j < 4; j++) {
+        const v = (byte >> (2 * j)) & 0b11;
+        
+        const color = colors[v];
+        const tileNum = i * 4 + j;
+        const row = Math.floor(tileNum / 64);
+        const col = tileNum % 64;
+        
+        offscreenCtx!.fillStyle = color;
+        offscreenCtx!.fillRect(col * squareSize, row * squareSize, squareSize, squareSize);
+        console.log(col * squareSize, row * squareSize, squareSize, squareSize);
       }
-    })
+    }
+  });
 
-    socket.on("e", (buff)=>{
-      console.log(extractSingleValueUpdate(buff))
-    })
+  // Assume we receive a 2-byte ArrayBuffer from WebSocket
+  function extractUpdate(buffer: ArrayBuffer) {
+    const view = new DataView(buffer);
+    const packedValue = view.getUint16(0, false); // Read 16-bit integer (big-endian)
+
+    const localPosition = packedValue >> 4; // Bits 15–4
+    const val = (packedValue >> 2) & 0b11;  // Bits 3–2
+    const isYou = (packedValue >> 1) & 0b1; // Bit 1
+
+    return {
+      localPosition,
+      val,
+      isYou: Boolean(isYou),
+    };
+  }
+    
+  // Assume we receive a 2-byte ArrayBuffer from WebSocket
+  function extractSingleValueUpdate(buffer: ArrayBuffer) {
+    const view = new DataView(buffer);
+    const byte = view.getUint8(0); // Read 1 byte
+  
+    // Mask the lower 6 bits (0b00111111 === 63)
+    const value = byte & 0b00111111;
+  
+    return value;
+  }
+
+  // Cached circle thing
+  const squareSize = offscreenCanvas.width / 64;
+  const cache = document.createElement("canvas");
+  cache.width = cache.height = squareSize;
+  const cctx = cache.getContext("2d")!;
+  cctx.fillStyle = "rgba(0, 0, 0, 0.5)";  // purple with 50% opacity
+  
+  const radius = squareSize / Math.sqrt(3); // ~0.577 * squareSize
+  
+  cctx.beginPath();
+  cctx.arc(
+    squareSize / 2, // x center
+    squareSize / 2, // y center
+    radius / 2,     // smaller radius for 1/3 area
+    0, 2 * Math.PI
+  );
+  cctx.fill();
+
+  socket.on("u", (buff)=>{
+
+    const squareSize = offscreenCanvas.width / 64;
+    const { localPosition: tile, val: pigment, isYou: isYou } = extractUpdate(buff);
+    const row = Math.floor(tile/64)
+    const col = tile % 64
+
+    offscreenCtx!.fillStyle = colors[pigment]
+    offscreenCtx!.fillRect(col * squareSize, row * squareSize, squareSize, squareSize);
+
+    if (isYou){
+      offscreenCtx!.drawImage(
+        cache,
+        col * squareSize,
+        row * squareSize
+      );
+    }
+  })
+
+  socket.on("e", (buff)=>{
+    console.log(extractSingleValueUpdate(buff))
+  })
 
   socket.on("disconnect", ()=>{
     listenerController.abort();
@@ -165,7 +165,6 @@ function throttle<T extends (...args: any[]) => void>(func: T, limit: number): T
     }
   } as T;
 }
-
 
 // resizes both canvases dynamically
 function resizeCanvas() {
