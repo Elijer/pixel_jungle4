@@ -31,6 +31,9 @@ const gameconfig = {
 
 socket.on("connect", ()=> {
 
+  const squareSize = offscreenCanvas.width / 64;
+  const cache = createCachedCircle(squareSize)
+
   // NOTE: By wrapping everything in an additional nest of "initial data", I can pass presets from server to client
   // like the map size, if that's ever needed
   // socket.off("initialData")
@@ -62,7 +65,7 @@ socket.on("connect", ()=> {
     }
   });
 
-  // Assume we receive a 2-byte ArrayBuffer from WebSocket
+  // Assume we receive a 2-byte ArrayBuffer from WebSocket with opinionated encoding
   function extractUpdate(buffer: ArrayBuffer) {
     const view = new DataView(buffer);
     const packedValue = view.getUint16(0, false); // Read 16-bit integer (big-endian)
@@ -78,7 +81,7 @@ socket.on("connect", ()=> {
     };
   }
     
-  // Assume we receive a 2-byte ArrayBuffer from WebSocket
+  // Assume we receive a 1-byte ArrayBuffer from WebSocket of value between 0 and 63 inclusive
   function extractSingleValueUpdate(buffer: ArrayBuffer) {
     const view = new DataView(buffer);
     const byte = view.getUint8(0); // Read 1 byte
@@ -88,24 +91,6 @@ socket.on("connect", ()=> {
   
     return value;
   }
-
-  // Cached circle thing
-  const squareSize = offscreenCanvas.width / 64;
-  const cache = document.createElement("canvas");
-  cache.width = cache.height = squareSize;
-  const cctx = cache.getContext("2d")!;
-  cctx.fillStyle = "rgba(0, 0, 0, 0.5)";  // purple with 50% opacity
-  
-  const radius = squareSize / Math.sqrt(3); // ~0.577 * squareSize
-  
-  cctx.beginPath();
-  cctx.arc(
-    squareSize / 2, // x center
-    squareSize / 2, // y center
-    radius / 2,     // smaller radius for 1/3 area
-    0, 2 * Math.PI
-  );
-  cctx.fill();
 
   socket.on("u", (buff)=>{
 
@@ -190,3 +175,22 @@ function animationLoop() {
 
 resizeCanvas(); // would rather do this with css
 animationLoop();
+
+function createCachedCircle(squareSize: number){
+  const cache = document.createElement("canvas");
+  cache.width = cache.height = squareSize;
+  const cctx = cache.getContext("2d")!;
+  cctx.fillStyle = "rgba(0, 0, 0, 0.5)";  // purple with 50% opacity
+  
+  const radius = squareSize / Math.sqrt(3); // ~0.577 * squareSize
+  
+  cctx.beginPath();
+  cctx.arc(
+    squareSize / 2, // x center
+    squareSize / 2, // y center
+    radius / 2,     // smaller radius for 1/3 area
+    0, 2 * Math.PI
+  );
+  cctx.fill();
+  return cache
+}
