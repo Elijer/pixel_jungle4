@@ -19,7 +19,7 @@ const baseColors = [
   [0, 0, 0],    // Midnight blue
   [90, 150, 90],     // Moss green
   [0, 110, 110],   // Forest green
-  [64, 224, 208],   // Turquoise
+  [190, 140, 120],   // Turquoise
 ];
 
 function jitterColor([r, g, b]: number[]): string {
@@ -126,7 +126,8 @@ socket.on("connect", ()=> {
   })
 
   socket.on("e", (buff)=>{
-    console.log(extractSingleValueUpdate(buff))
+    const energy = extractSingleValueUpdate(buff)
+    updateEnergyGrid(energyCtx!, energy);
   })
 
   socket.on("disconnect", ()=>{
@@ -207,4 +208,40 @@ function createCachedCircle(squareSize: number){
   );
   cctx.fill();
   return cache
+}
+
+
+/**
+ * Updates the energy grid visualization based on the current energy level
+ * @param {CanvasRenderingContext2D} ctx - The canvas context
+ * @param {number} energy - Energy value between 0-63
+ */
+function updateEnergyGrid(ctx: CanvasRenderingContext2D, energy: number) {
+  // Clear the canvas first
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  
+  // Calculate how many squares to fill
+  const squaresToFill = Math.max(0, Math.min(64, Math.floor(energy) + 1));
+  
+  // Loop through grid positions
+  for (let i = 0; i < 8; i++) {
+    for (let j = 0; j < 8; j++) {
+      const squareIndex = i + j * 8; // Calculate index from 0-63
+      
+      if (squareIndex < squaresToFill) {
+        // Determine color based on range
+        let colorIndex = 3
+        if (squareIndex < 32) colorIndex = 2
+        if (squareIndex < 16) colorIndex = 1
+
+        
+        // Set fill color from the baseColors array
+        const [r, g, b] = baseColors[colorIndex];
+        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+        
+        // Draw the square
+        ctx.fillRect(i * 32 + 1, j * 32 + 1, 30.5, 30.5);
+      }
+    }
+  }
 }

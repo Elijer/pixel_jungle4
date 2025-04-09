@@ -60,10 +60,11 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
     // organisms
     evolutionChance: 16, // 4-64 ish
-    plantCycle: 500,
+    plantCycle: 8000, // 500 is really fun
 
     // Player
-    energyDrainCycle: 4000
+    energyDrainCycle: 4000,
+    playerStartingEnergy: 15
   }
 
   // Currently it's possible to hop from left to right on the map
@@ -324,11 +325,12 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     // if (!pullTestingPositions.length) pullTestingPositions = [...testingPositions]
     // let position = testingPositions.pop()!
     let entity = createSpatialEntity(position, animalPositions, animalsByPosition)
-    energies[entity] = 15 // come back to this
+    energies[entity] = config.playerStartingEnergy // come back to this
     sockets.set(entity, socket)
     entitiesBySocketId.set(socket.id, entity)
     // let viewIndex = getViewFromPosition(position)
     // viewRooms.get(viewIndex)!.add(socketId)
+    sendEnergyMessage(socket, config.playerStartingEnergy)
     return {player: entity, position}
   }
 
@@ -560,8 +562,8 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       removeEntityEntirely(plant)
       const newEnergy = incrementPlayerEnergy(player)
       if (newEnergy){
-        const newPigment: 0 | 1 | 2 | 3  = getPlayerLevel(player)
         sendUpdate(playerPosition, socket)
+        sendEnergyMessage(socket, newEnergy)
       }
       // TODO
       // sendUpdate() // have to send the players pigment representation otherwise it's just the plant overwrite update that gets sent
