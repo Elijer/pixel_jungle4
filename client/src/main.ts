@@ -6,6 +6,55 @@ const herokuUrl = 'set the url for whatever service you are using'
 let socketAddress = window.location.hostname === "localhost" ? "ws://localhost:3000" : herokuUrl
 const socket = io(socketAddress)
 
+// TODO: the server should be passing this kind of thing - there's a note in "connect" about this
+const gameconfig = {
+  inputCooldownTime: 3,
+  jumbotronCooldown: 2000,
+  defaultJumbotronMsg: "---"
+}
+
+const playerEventKey: Record<string, number> = {
+  "death by hunger": 0,
+  "out of bounds": 1,
+  "food warning": 2,
+  "you got ate": 3,
+  "error": 255,
+}
+
+// Create the flipped version with proper typing
+const andNowYouAreTheFool: Record<number, string> = Object.entries(playerEventKey).reduce((acc, [key, value]) => {
+  acc[value] = key;
+  return acc;
+}, {} as Record<number, string>);
+
+function jumbotron(msg: string) {
+  const jumbo = document.getElementById("jumbotron");
+  if (!jumbo) return;
+  
+  // Clear current content
+  jumbo.innerHTML = "";
+  
+  let charIndex = 0;
+  const typingSpeed = 30; // 12 characters per second (in milliseconds)
+  
+  // Type each character one by one
+  const typeNextChar = () => {
+    if (charIndex < msg.length) {
+      jumbo.innerHTML += msg.charAt(charIndex);
+      charIndex++;
+      setTimeout(typeNextChar, typingSpeed);
+    } else {
+      // When typing is complete, set timeout to clear the message
+      setTimeout(() => {
+        jumbo.innerHTML = gameconfig.defaultJumbotronMsg;
+      }, gameconfig.jumbotronCooldown);
+    }
+  };
+  
+  // Start typing
+  typeNextChar();
+}
+
 // Grab the canvas
 const canvas = document.getElementById("main-canvas") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d");
@@ -36,11 +85,6 @@ for (let i = 0; i<8; i++){
   for (let j = 0; j < 8; j++){
     energyCtx!.fillRect(i * 32 + 2, j * 32 + 2, 30, 30);
   }
-}
-
-// TODO: the server should be passing this kind of thing - there's a note below about this
-const gameconfig = {
-  inputCooldownTime: 3
 }
 
 socket.on("connect", ()=> {
@@ -74,7 +118,7 @@ socket.on("connect", ()=> {
         
         offscreenCtx!.fillStyle = color;
         offscreenCtx!.fillRect(col * squareSize, row * squareSize, squareSize, squareSize);
-        console.log(col * squareSize, row * squareSize, squareSize, squareSize);
+        // console.log(col * squareSize, row * squareSize, squareSize, squareSize);
       }
     }
   });
@@ -106,7 +150,7 @@ socket.on("connect", ()=> {
     return value;
   }
 
-  socket.on("u", (buff)=>{
+  socket.on("t", (buff)=>{
 
     const squareSize = offscreenCanvas.width / 64;
     const { localPosition: tile, val: pigment, isYou: isYou } = extractUpdate(buff);
@@ -128,6 +172,11 @@ socket.on("connect", ()=> {
   socket.on("e", (buff)=>{
     const energy = extractSingleValueUpdate(buff)
     updateEnergyGrid(energyCtx!, energy);
+  })
+
+  socket.on("playerEvent", (buff)=>{
+    const msg = andNowYouAreTheFool[extractSingleValueUpdate(buff)]
+    jumbotron(msg)
   })
 
   socket.on("disconnect", ()=>{

@@ -64,11 +64,11 @@ for (let i = 0; i < 100; i++){
 
 setInterval(()=>{
   game.handlePlantLifecycles()
-}, game.config.plantCycle)
+}, game.cfg.plantCycle)
 
 setInterval(()=>{
   game.handleEnergyDrainCycles()
-}, game.config.energyDrainCycle)
+}, game.cfg.energyDrainCycle)
 
 httpServer.listen(port, () => {
   log(`-->>> STARTED SERVER: ${port} <<<--`)

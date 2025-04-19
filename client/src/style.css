@@ -11,9 +11,12 @@ body {
   overflow: hidden; /* Prevent scrolling */
 }
 
+#dash {
+  margin-left: 20px;
+}
+
 #energy-canvas {
   image-rendering: pixelated;
-  margin-left: 20px;
   background: #111;
   /* border-radius: 10px; */
 }
@@ -21,6 +24,17 @@ body {
 #main-canvas {
   border-radius: 10px;
   display: block;
+}
+
+#jumbotron {
+  text-align: center;
+  color: #ccc;
+  font-size: 14px;
+  margin-bottom: 8px;
+  font-family: 'Courier New', Courier, monospace;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 
 /* Mobile: scale with CSS to fit viewport */

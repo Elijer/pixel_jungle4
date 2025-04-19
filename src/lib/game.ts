@@ -4,6 +4,15 @@ import type  { Socket } from 'socket.io'
 import type { Server, DefaultEventsMap } from 'socket.io'
 import { simplexPositive } from './simplex.js';
 
+const playerEventKey: Record<string, number> = {
+  "death by hunger": 0,
+  "out of bounds": 1,
+  "food warning": 2,
+  "you got ate": 3,
+  "nom": 4,
+  "error": 255,
+} 
+
 const testingPositions = [1, 20, 32, 44, 55, 66]
 let pullTestingPositions = [...testingPositions]
 
@@ -51,7 +60,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   const map = getMapConfig()
 
-  const config: Record<string, any> = {
+  const cfg: Record<string, any> = {
 
     // Minerals
     mineralScale: 60,
@@ -63,7 +72,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     plantCycle: 8000, // 500 is really fun
 
     // Player
-    energyDrainCycle: 4000,
+    energyDrainCycle: 500, // 4000,
     playerStartingEnergy: 15
   }
 
@@ -111,7 +120,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
   for (let y = 0; y < map.totalRows; y++){
     for (let x = 0; x < map.totalCols; x++){
-      let noise = Math.floor(+simplexPositive(x, y, config.mineralScale, config.mineralSeed) * 4) as Mineral
+      let noise = Math.floor(+simplexPositive(x, y, cfg.mineralScale, cfg.mineralSeed) * 4) as Mineral
       let tileNumber = y * map.totalCols + x
       minerals[tileNumber] = noise
     }
@@ -325,12 +334,12 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     // if (!pullTestingPositions.length) pullTestingPositions = [...testingPositions]
     // let position = testingPositions.pop()!
     let entity = createSpatialEntity(position, animalPositions, animalsByPosition)
-    energies[entity] = config.playerStartingEnergy // come back to this
+    energies[entity] = cfg.playerStartingEnergy // come back to this
     sockets.set(entity, socket)
     entitiesBySocketId.set(socket.id, entity)
     // let viewIndex = getViewFromPosition(position)
     // viewRooms.get(viewIndex)!.add(socketId)
-    sendEnergyMessage(socket, config.playerStartingEnergy)
+    sendEnergyUpdate(socket, cfg.playerStartingEnergy)
     return {player: entity, position}
   }
 
@@ -371,7 +380,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
 
       // If not at the top level, AND we get a random ~1/8 chance, mutate up to higher level but only have one offspring
       // if (level < 3 && Math.random() > .99){ // simpler, but less favorable distribution for gameplay
-      const chanceOfMutationScaledToLevel = (1 - Math.pow(config.evolutionChance, -level-1))
+      const chanceOfMutationScaledToLevel = (1 - Math.pow(cfg.evolutionChance, -level-1))
       // The goal here is to make it less likely for 2 to become level 3 than for 1 to become 2
       if (level < 3 && Math.random() > chanceOfMutationScaledToLevel){
         level = level + 1
@@ -390,7 +399,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       const childBirthtimes: number[] = []
       for (let i = 0; i < childrenNumber; i++){
         // let birthTime = normalLifespan*.99-minerals[position]*14
-        const minVal = config.mineralInversion ? 3-minerals[position] : minerals[position]
+        const minVal = cfg.mineralInversion ? 3-minerals[position] : minerals[position]
         let birthTime = normalLifespan*.99-minVal*level*16
         childBirthtimes.push(birthTime)
       }
@@ -426,15 +435,15 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     othersBuffer.writeUInt16BE(othersPackedValue, 0)
 
     if (!socket){
-      socketIo.to(`v:${view}`).emit('u', othersBuffer) // send to all parties by room
+      socketIo.to(`v:${view}`).emit("t", othersBuffer) // send to all parties by room
     } else {
       // otherwise, create a buffer that indicates selfhood just for the party that moved
       // and send that to them, and the non-selfhood update to everyone else
       const selfPackedValue = (localPosition << 4) | (val << 2 ) | 1 << 1 // the 0 position is still remaining empty
       const selfBuffer = Buffer.alloc(2)
       selfBuffer.writeUInt16BE(selfPackedValue, 0)
-      socket?.emit('u', selfBuffer)
-      socket.to(`v:${view}`).emit('u', othersBuffer) // sends to everyone BESIDES socket (note it is socket.to and not socketIo.to)
+      socket?.emit("t", selfBuffer)
+      socket.to(`v:${view}`).emit("t", othersBuffer) // sends to everyone BESIDES socket (note it is socket.to and not socketIo.to)
     }
   }
 
@@ -563,7 +572,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       const newEnergy = incrementPlayerEnergy(player)
       if (newEnergy){
         sendUpdate(playerPosition, socket)
-        sendEnergyMessage(socket, newEnergy)
+        sendEnergyUpdate(socket, newEnergy)
       }
       // TODO
       // sendUpdate() // have to send the players pigment representation otherwise it's just the plant overwrite update that gets sent
@@ -650,7 +659,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     // console.timeEnd("st")
   }
 
-  function sendEnergyMessage(socket: ASocket, energy: Energy){
+  function sendEnergyUpdate(socket: ASocket, energy: Energy){
     /*
     informative energy event messages
     - you were eaten
@@ -660,7 +669,17 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     */
     const buffer = Buffer.alloc(1)
     buffer.writeUInt8(energy, 0)
-    socket.emit('e', buffer)
+    socket.emit("e", buffer)
+  }
+
+  function sendPlayerEvent(socket: ASocket, eventName: string){
+    const buffer = Buffer.alloc(2)
+    const code = playerEventKey[eventName] ?? 255
+    if (code === 255){
+      warn("oh you can't be doin that")
+    }
+    buffer.writeUInt16BE(code, 0)
+    socket.emit("playerEvent", buffer)
   }
 
   function handleEnergyDrainCycles(){
@@ -678,7 +697,8 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       if (e === 0){
         // removeEntityEntirely(player)
         destroyPlayerMuahaha(player) // I think this is a better fit
-        // sendUpdate(position) // I think this is redundant - it's done in removeEntityEntirely
+        sendPlayerEvent(socket, "death by hunger")
+        // socket.emit('playerEvent', )
         // TODO
          // I think this will update everyone so that the thing is dead?
         // But we also need to do whatever we do at the beginning
@@ -691,7 +711,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
         // for that player, and send ONLY THEM a lil update about what's going down
         // I think we'll do someting similar if they die too -- we'll need their socket
       }
-      sendEnergyMessage(socket, e)
+      sendEnergyUpdate(socket, e)
 
     }
   }
@@ -780,7 +800,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     getRandomPositionValue,
     playerMove,
     playerEat,
-    config,
+    cfg,
   }
 }
 
