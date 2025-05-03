@@ -12,4 +12,4 @@ It wouldn't be hard at all to
 That seems to be the combined cost of a single update.
 So the overhead is about 20-40 times the cost of the update (I think that for the empty bits maybe those are the 1byte ones?)
 So if there were like 60 updates in a second, that could be 100kb a second, a megabyte of savings in just 10 seconds.
-But what it would also do is potentially, if left unstaggered, make for larger network jobs at the same time, spiking the CPU, which is not ideal
+But what it would also do is potentially, if left unstaggered, make for larger network jobs at the same time, spiking the CPU, which is not idealx
