@@ -1,6 +1,6 @@
 import './style.css';
 import { io } from "socket.io-client";
-const jitterOn = true
+// const jitterOn = true
 
 const herokuUrl = 'set the url for whatever service you are using'
 let socketAddress = window.location.hostname === "localhost" ? "ws://localhost:3000" : herokuUrl

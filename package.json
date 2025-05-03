@@ -8,7 +8,8 @@
     "ts": "tsc --w",
     "dev": "bun --watch src/index.ts",
     "start": "bun -w src/index.ts",
-    "serve-client": "cd client; npm run build; cd ..; tsc; node dist/index.js"
+    "serve-client": "cd client; npm run build; cd ..; tsc; node dist/index.js",
+    "build": "cd client && npm install && npm run build && cd ../ && tsc"
   },
   "keywords": [],
   "author": "",
