@@ -1,26 +1,28 @@
-// vite.config.ts with a custom middleware plugin
+// vite.config.ts with custom server middleware to handle URL parameters
 import { defineConfig, Plugin } from 'vite'
 import { resolve } from 'path'
-import fs from 'fs'
 
-// Custom plugin to handle clean URLs
-function cleanUrls(): Plugin {
+// Custom plugin to handle URLs with parameters
+function urlParamsPlugin(): Plugin {
   return {
-    name: 'clean-urls',
+    name: 'url-params-plugin',
     configureServer(server) {
-      server.middlewares.use((req, res, next) => {
-        // Handle specific routes
-        if (req.url === '/nested') {
-          // Rewrite to the actual file path
-          req.url = '/pages/nested/index.html'
-        }
-        // Add more routes as needed:
-        // else if (req.url === '/another-route') {
-        //   req.url = '/pages/another-route/index.html'
-        // }
-        
-        next()
-      })
+      return () => {
+        server.middlewares.use((req, res, next) => {
+          // Extract base path without query parameters
+          const url = req.url || ''
+          const [basePath] = url.split('?')
+          
+          // Handle specific routes, preserving query parameters
+          if (basePath === '/nested') {
+            // Change just the path part, keeping the query string intact
+            req.url = url.replace('/nested', '/pages/nested/index.html')
+            console.log(`Rewrote URL: ${url} -> ${req.url}`)
+          }
+          
+          next()
+        })
+      }
     }
   }
 }
@@ -32,10 +34,12 @@ export default defineConfig({
     }
   },
   
-  // Use our custom plugin for URL rewriting
-  plugins: [cleanUrls()],
+  // Use our custom plugin for handling URLs with parameters
+  plugins: [urlParamsPlugin()],
   
-  // Build configuration for production
+  // Still mark as MPA for proper build handling
+  appType: 'mpa',
+  
   build: {
     rollupOptions: {
       input: {
