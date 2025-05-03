@@ -51,7 +51,6 @@ function jumbotron(msg: string) {
     }
   };
   
-  // Start typing
   typeNextChar();
 }
 

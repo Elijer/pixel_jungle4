@@ -72,7 +72,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
     plantCycle: 8000, // 500 is really fun
 
     // Player
-    energyDrainCycle: 500, // 4000,
+    energyDrainCycle: 4000, // 4000,
     playerStartingEnergy: 15
   }
 
@@ -689,6 +689,7 @@ function initializeGame(socketIo: Server<DefaultEventsMap, DefaultEventsMap, Def
       if (!player) throw new Error(`No player exists for socket ${socket.id}`)
       const position = animalPositions[player]
       if (!position){
+        // So one case for here is when a player has died, but their connection remains
         warn(`when decrementing players by socket, no position found for animal ${player}`)
         continue
       }
