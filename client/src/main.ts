@@ -2,8 +2,9 @@ import './style.css';
 import { io } from "socket.io-client";
 // const jitterOn = true
 
-const herokuUrl = 'set the url for whatever service you are using'
-let socketAddress = window.location.hostname === "localhost" ? "ws://localhost:3000" : herokuUrl
+// Replace with whatever URL you are using in production so socket knows where to turn to
+const prodUrl = 'https://pixel-jungle4.onrender.com'
+let socketAddress = window.location.hostname === "localhost" ? "ws://localhost:3000" : prodUrl
 const socket = io(socketAddress)
 
 // TODO: the server should be passing this kind of thing - there's a note in "connect" about this
